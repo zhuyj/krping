@@ -56,6 +56,7 @@
 #include <rdma/rdma_cm.h>
 
 #include "getopt.h"
+#include "krping.h"
 
 #define PFX "krping: "
 
@@ -67,7 +68,7 @@ MODULE_PARM_DESC(debug, "Debug level (0=none, 1=all)");
 MODULE_AUTHOR("Steve Wise");
 MODULE_DESCRIPTION("RDMA ping server");
 MODULE_LICENSE("Dual BSD/GPL");
-
+#if 0
 static const struct krping_option krping_opts[] = {
 	{"count", OPT_INT, 'C'},
 	{"size", OPT_INT, 'S'},
@@ -244,7 +245,7 @@ struct krping_cb {
 	struct rdma_cm_id *child_cm_id;	/* connection on server side */
 	struct list_head list;
 };
-
+#endif
 static int krping_cma_event_handler(struct rdma_cm_id *cma_id,
 				   struct rdma_cm_event *event)
 {
