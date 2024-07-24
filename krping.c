@@ -345,7 +345,7 @@ static void krping_cq_event_handler(struct ib_cq *cq, void *ctx)
 		return;
 	}
 	if (!cb->wlat && !cb->rlat && !cb->bw)
-		ib_req_notify_cq(cb->cq, IB_CQ_NEXT_COMP);
+		schedule_work(&cb->ib_req_notify_cq_work);
 	while ((ret = ib_poll_cq(cb->cq, 1, &wc)) == 1) {
 		if (wc.status) {
 			if (wc.status == IB_WC_WR_FLUSH_ERR) {
@@ -420,6 +420,15 @@ static void krping_cq_event_handler(struct ib_cq *cq, void *ctx)
 error:
 	cb->state = ERROR;
 	wake_up_interruptible(&cb->sem);
+}
+
+static void krping_ib_req_notify_cq_handler(struct work_struct *work)
+{
+	struct krping_cb *cb_work = container_of(work,
+						 struct krping_cb,
+						 ib_req_notify_cq_work);
+
+	ib_req_notify_cq(cb_work->cq, IB_CQ_NEXT_COMP);
 }
 
 static int krping_accept(struct krping_cb *cb)
@@ -906,7 +915,7 @@ static void rlat_test(struct krping_cb *cb)
 	start = ktime_get();
 	if (!cb->poll) {
 		cb->state = RDMA_READ_ADV;
-		ib_req_notify_cq(cb->cq, IB_CQ_NEXT_COMP);
+		schedule_work(&cb->ib_req_notify_cq_work);
 	}
 	while (scnt < iters) {
 
@@ -925,8 +934,7 @@ static void rlat_test(struct krping_cb *cb)
 					cb->state != RDMA_READ_ADV);
 				if (cb->state == RDMA_READ_COMPLETE) {
 					ne = 1;
-					ib_req_notify_cq(cb->cq, 
-						IB_CQ_NEXT_COMP);
+					schedule_work(&cb->ib_req_notify_cq_work);
 				} else {
 					ne = -1;
 				}
@@ -2121,6 +2129,9 @@ static int krping_doit(char *cmd)
 		goto out;
 	}
 	DEBUG_LOG("created cm_id %p\n", cb->cm_id);
+
+	/* Add ib_req_notify_cq workqueue handler */
+	INIT_WORK(&cb->ib_req_notify_cq_work, krping_ib_req_notify_cq_handler);
 
 	if (cb->server)
 		krping_run_server(cb);

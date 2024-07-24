@@ -179,6 +179,7 @@ struct krping_cb {
 					/* listener on server side. */
 	struct rdma_cm_id *child_cm_id;	/* connection on server side */
 	struct list_head list;
+	struct work_struct		ib_req_notify_cq_work;
 };
 
 #endif /* _KRPING_H */
