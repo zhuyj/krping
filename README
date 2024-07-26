@@ -260,5 +260,138 @@ and compute RTT/2 or Gbps results.
 
 Use these at your own risk.
 
+Server: 
+ib
+
+[27069.884232] krping: proc read called...
+[27220.945037] krping: proc write |server,addr=10.95.3.140,port=9999|
+[27220.945154] server
+[27220.945243] ipaddr (10.95.3.140)
+[27220.947003] port 9999
+[27220.947123] created cm_id 000000002b46f391
+[27220.947231] rdma_bind_addr successful
+[27220.947323] rdma_listen
+[27240.830449] cma_event type 4 cma_id 00000000a3734083 (child)
+[27240.830581] child cma 00000000a3734083
+[27240.830781] Fastreg supported - device_cap_flags 0x4341c76
+[27240.830896] created pd 000000008ee3ee0a
+[27240.831254] created cq 000000007afca1ac
+[27240.831556] created qp 000000000664f622
+[27240.831651] krping: krping_setup_buffers called on cb 000000003586dd51
+[27240.831788] krping: reg rkey 0x18021010 page_list_len 1
+[27240.831914] krping: allocated & registered buffers...
+[27240.832012] accepting client connection request
+[27240.832466] cma_event type 9 cma_id 00000000a3734083 (child)
+[27240.832545] recv completion
+[27240.832571] Received rkey 20021101 addr c28e76d80 len 64 from peer
+[27240.832576] ESTABLISHED
+[27240.832869] server received sink adv
+[27240.832977] krping: post_inv = 1, reg_mr new rkey 0x18021001 pgsz 4096 len 64 iova_start 429f4d340
+[27240.833134] server posted rdma read req
+[27240.833153] rdma read completion
+[27240.833324] server received read complete
+[27240.833422] server posted go ahead
+[27240.833432] send completion
+[27240.833651] recv completion
+[27240.833755] Received rkey 20021102 addr c28e76300 len 64 from peer
+[27240.833866] server received sink adv
+[27240.833963] krping: post_inv = 0, reg_mr new rkey 0x18021002 pgsz 4096 len 64 iova_start 429f4d340
+[27240.834102] rdma write from lkey 18021002 laddr 429f4d340 len 64
+[27240.834213] rdma write completion
+[27240.834330] server rdma write complete
+[27240.834427] server posted go ahead
+[27240.834436] send completion
+[27240.834654] recv completion
+[27240.834743] Received rkey 20021103 addr c28e76d80 len 64 from peer
+[27240.834849] server received sink adv
+[27240.834945] krping: post_inv = 1, reg_mr new rkey 0x18021003 pgsz 4096 len 64 iova_start 429f4d340
+[27240.835085] server posted rdma read req
+[27240.835097] rdma read completion
+[27240.835274] server received read complete
+[27240.835372] server posted go ahead
+[27240.835381] send completion
+[27240.835598] recv completion
+[27240.835687] Received rkey 20021104 addr c28e76300 len 64 from peer
+[27240.835793] server received sink adv
+[27240.835888] krping: post_inv = 0, reg_mr new rkey 0x18021004 pgsz 4096 len 64 iova_start 429f4d340
+[27240.836026] rdma write from lkey 18021004 laddr 429f4d340 len 64
+[27240.836137] rdma write completion
+[27240.836234] server rdma write complete
+[27240.836332] server posted go ahead
+[27240.836340] send completion
+[27240.836560] recv completion
+[27240.836656] Received rkey 20021105 addr c28e76d80 len 64 from peer
+[27240.836781] server received sink adv
+[27240.836876] krping: post_inv = 1, reg_mr new rkey 0x18021005 pgsz 4096 len 64 iova_start 429f4d340
+[27240.837015] server posted rdma read req
+[27240.837028] rdma read completion
+[27240.837206] server received read complete
+[27240.837303] server posted go ahead
+[27240.837312] send completion
+[27240.837530] recv completion
+[27240.837619] Received rkey 20021106 addr c28e76300 len 64 from peer
+[27240.837725] server received sink adv
+[27240.837820] krping: post_inv = 0, reg_mr new rkey 0x18021006 pgsz 4096 len 64 iova_start 429f4d340
+[27240.837973] rdma write from lkey 18021006 laddr 429f4d340 len 64
+[27240.838082] rdma write completion
+[27240.838180] server rdma write complete
+[27240.838276] server posted go ahead
+[27240.838285] send completion
+[27240.838781] cma_event type 10 cma_id 00000000a3734083 (child)
+[27240.838882] krping: DISCONNECT EVENT...
+[27240.839000] krping: wait for RDMA_READ_ADV state 10
+[27240.839175] krping: cq completion in ERROR state
+[27240.839338] krping_free_buffers called on cb 000000003586dd51
+[27240.839748] destroy cm_id 000000002b46f391
+
+Client:
+ib
+[29292.878783] krping: proc read called...
+[29450.905890] krping: proc write |client,addr=10.95.3.140,port=9999,count=3|
+[29450.905905] client
+[29450.905908] ipaddr (10.95.3.140)
+[29450.905910] port 9999
+[29450.905912] count 3
+[29450.905917] created cm_id 000000000c9829b2
+[29450.905961] cma_event type 0 cma_id 000000000c9829b2 (parent)
+[29450.906119] cma_event type 2 cma_id 000000000c9829b2 (parent)
+[29450.906132] Fastreg supported - device_cap_flags 0x4341c76
+[29450.906135] rdma_resolve_addr - rdma_resolve_route successful
+[29450.906141] created pd 0000000050f8ace5
+[29450.906332] created cq 000000001916766c
+[29450.906557] created qp 000000006ed264fa
+[29450.906558] krping: krping_setup_buffers called on cb 00000000fd924db6
+[29450.906595] krping: reg rkey 0x20021110 page_list_len 1
+[29450.906597] krping: allocated & registered buffers...
+[29450.908793] cma_event type 9 cma_id 000000000c9829b2 (parent)
+[29450.908800] ESTABLISHED
+[29450.908814] rdma_connect successful
+[29450.908822] krping: post_inv = 1, reg_mr new rkey 0x20021101 pgsz 4096 len 64 iova_start c28e76d80
+[29450.908828] RDMA addr c28e76d80 rkey 20021101 len 64
+[29450.908849] send completion
+[29450.909868] recv completion
+[29450.909972] krping: post_inv = 1, reg_mr new rkey 0x20021102 pgsz 4096 len 64 iova_start c28e76300
+[29450.909986] RDMA addr c28e76300 rkey 20021102 len 64
+[29450.910006] send completion
+[29450.910872] recv completion
+[29450.910976] krping: post_inv = 1, reg_mr new rkey 0x20021103 pgsz 4096 len 64 iova_start c28e76d80
+[29450.910989] RDMA addr c28e76d80 rkey 20021103 len 64
+[29450.911008] send completion
+[29450.911817] recv completion
+[29450.911919] krping: post_inv = 1, reg_mr new rkey 0x20021104 pgsz 4096 len 64 iova_start c28e76300
+[29450.911933] RDMA addr c28e76300 rkey 20021104 len 64
+[29450.911952] send completion
+[29450.912777] recv completion
+[29450.912882] krping: post_inv = 1, reg_mr new rkey 0x20021105 pgsz 4096 len 64 iova_start c28e76d80
+[29450.912895] RDMA addr c28e76d80 rkey 20021105 len 64
+[29450.912914] send completion
+[29450.913748] recv completion
+[29450.913850] krping: post_inv = 1, reg_mr new rkey 0x20021106 pgsz 4096 len 64 iova_start c28e76300
+[29450.913865] RDMA addr c28e76300 rkey 20021106 len 64
+[29450.913884] send completion
+[29450.914721] recv completion
+[29450.914914] cq flushed
+[29450.915115] krping_free_buffers called on cb 00000000fd924db6
+[29450.915399] destroy cm_id 000000000c9829b2
 
 END-OF-FILE
