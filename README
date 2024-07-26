@@ -260,7 +260,7 @@ and compute RTT/2 or Gbps results.
 
 Use these at your own risk.
 
-Server: 
+Server: echo "server,addr=10.95.3.140,port=9999" > /proc/krping
 ib
 
 [27069.884232] krping: proc read called...
@@ -344,7 +344,7 @@ ib
 [27240.839338] krping_free_buffers called on cb 000000003586dd51
 [27240.839748] destroy cm_id 000000002b46f391
 
-Client:
+Client: echo "client,addr=10.95.3.140,port=9999,count=3" > /proc/krping
 ib
 [29292.878783] krping: proc read called...
 [29450.905890] krping: proc write |client,addr=10.95.3.140,port=9999,count=3|
