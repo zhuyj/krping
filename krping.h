@@ -180,6 +180,10 @@ struct krping_cb {
 	struct rdma_cm_id *child_cm_id;	/* connection on server side */
 	struct list_head list;
 	struct work_struct		ib_req_notify_cq_work;
+
+	/* SRQ stuff */
+	bool 				use_srq;
+	struct ib_srq			*srq;
 };
 
 #endif /* _KRPING_H */

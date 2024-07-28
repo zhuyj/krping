@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0 OR Linux-OpenIB */
+/* SPDX-License-Identifier: GPL-2.0 */
 
 #include <linux/version.h>
 #include <linux/module.h>
@@ -441,6 +441,10 @@ static int krping_create_qp(struct krping_cb *cb)
 	init_attr.send_cq = cb->cq;
 	init_attr.recv_cq = cb->cq;
 	init_attr.sq_sig_type = IB_SIGNAL_REQ_WR;
+	if (krperf_srq_valid(cb)) {
+		init_attr.srq = cb->srq;
+		init_attr.cap.max_recv_wr = 0;
+	}
 
 	if (cb->server) {
 		ret = rdma_create_qp(cb->child_cm_id, cb->pd, &init_attr);
@@ -455,11 +459,84 @@ static int krping_create_qp(struct krping_cb *cb)
 	return ret;
 }
 
+static inline bool krperf_srq_valid(struct krping_cb *cb)
+{
+        if (cb != NULL && cb->use_srq && cb->srq != NULL)
+                return true;
+
+        return false;
+}
+
+static void krperf_free_srq(struct krping_cb *cb)
+{
+	if (!krperf_srq_valid(cb))
+		return;
+
+	ib_destroy_srq(cb->srq);
+	cb->srq = NULL;
+}
+
 static void krping_free_qp(struct krping_cb *cb)
 {
 	ib_destroy_qp(cb->qp);
+	krperf_free_srq(cb);
 	ib_destroy_cq(cb->cq);
 	ib_dealloc_pd(cb->pd);
+}
+
+static void krperf_srq_event(struct ib_event *event, void *ctx)
+{
+	switch (event->event) {
+	case IB_EVENT_SRQ_ERR:
+		pr_err("KRPERF: event IB_EVENT_SRQ_ERR unhandled\n");
+		break;
+	case IB_EVENT_SRQ_LIMIT_REACHED:
+		pr_err("KRPERF: reach SRQ_LIMIT, need to increase the value of sge\n");
+		break;
+	default:
+		break;
+	}
+}
+
+static int krperf_alloc_srq(struct krping_cb *cb)
+{
+	struct ib_srq_init_attr srq_attr = {
+		.event_handler = krperf_srq_event,
+		.srq_context = (void *)cb,
+		.attr.max_wr = cb->pd->device->attrs.max_srq_wr,
+		.attr.max_sge = cb->pd->device->attrs.max_srq_sge,
+		.attr.srq_limit = cb->pd->device->attrs.max_srq_sge / 3,
+		.srq_type = IB_SRQT_BASIC,
+	};
+
+	if (!cb->use_srq)
+		return 0;
+
+	pr_info_once("SRQ in krperf is in experimental stage\n");
+
+	if (cb->srq) {
+		pr_warn("File: %s +%d func: %s, ib dev %s srq\n",
+				__FILE__, __LINE__, __func__, cb->pd->device->name);
+		return 0;
+	}
+
+	pr_warn("File: %s +%d func: %s, ib dev %s create srq\n",
+		__FILE__, __LINE__, __func__, cb->pd->device->name);
+
+	if (!cb->pd) {
+		pr_warn("srq, file: %s +%d func: %s, pd NULL\n", __FILE__, __LINE__, __func__);
+		WARN_ON_ONCE(1);
+		return -EINVAL;
+	}
+
+	cb->srq = ib_create_srq(cb->pd, &srq_attr);
+
+	if (IS_ERR(cb->srq)) {
+		pr_debug("ib_create_srq() failed: %ld\n", PTR_ERR(cb->srq));
+		return PTR_ERR(cb->srq);
+	}
+
+	return 0;
 }
 
 static int krping_setup_qp(struct krping_cb *cb, struct rdma_cm_id *cm_id)
@@ -493,6 +570,13 @@ static int krping_setup_qp(struct krping_cb *cb, struct rdma_cm_id *cm_id)
 		}
 	}
 
+	ret = krperf_alloc_srq(cb);
+	if (ret) {
+		pr_warn("File: %s +%d func: %s, srq alloc failed: %d\n",
+				__FILE__, __LINE__, __func__, ret);
+		return ret;
+	}
+
 	ret = krping_create_qp(cb);
 	if (ret) {
 		printk(KERN_ERR PFX "krping_create_qp failed: %d\n", ret);
@@ -501,6 +585,7 @@ static int krping_setup_qp(struct krping_cb *cb, struct rdma_cm_id *cm_id)
 	DEBUG_LOG("created qp %p\n", cb->qp);
 	return 0;
 err2:
+	krperf_free_srq(cb);
 	ib_destroy_cq(cb->cq);
 err1:
 	ib_dealloc_pd(cb->pd);
@@ -1574,7 +1659,7 @@ static void flush_qp(struct krping_cb *cb)
 	DEBUG_LOG("qp_flushed! ccnt %u\n", ccnt);
 }
 
-static unsigned long get_seconds(void)
+static unsigned long krperf_get_seconds(void)
 {
 	time64_t sec;
 
@@ -1623,18 +1708,18 @@ static void krping_fr_test(struct krping_cb *cb)
 	inv.send_flags = IB_SEND_SIGNALED;
 	
 	DEBUG_LOG("fr_test: stag index 0x%x plen %u size %u depth %u\n", mr->rkey >> 8, plen, cb->size, cb->txdepth);
-	start = get_seconds();
+	start = krperf_get_seconds();
 	while (!cb->count || count <= cb->count) {
 		if (signal_pending(current)) {
 			printk(KERN_ERR PFX "signal!\n");
 			break;
 		}
-		if ((get_seconds() - start) >= 9) {
+		if ((krperf_get_seconds() - start) >= 9) {
 			DEBUG_LOG("fr_test: pausing 1 second! count %u latest size %u plen %u\n", count, size, plen);
 			wait_event_interruptible_timeout(cb->sem, cb->state == ERROR, HZ);
 			if (cb->state == ERROR)
 				break;
-			start = get_seconds();
+			start = krperf_get_seconds();
 		}	
 		while (scnt < (cb->txdepth>>1)) {
 			ib_update_fast_reg_key(mr, ++key);
