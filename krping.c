@@ -151,6 +151,36 @@ static int client_recv(struct krping_cb *cb, struct ib_wc *wc)
 	return 0;
 }
 
+static inline bool krperf_srq_valid(struct krping_cb *cb)
+{
+        if (cb != NULL && cb->use_srq && cb->srq != NULL)
+                return true;
+
+        return false;
+}
+
+static int krperf_ib_srq_rq_post_recv(struct krping_cb *cb, const struct ib_recv_wr **bad_wr)
+{
+	int ret = 0;
+
+	if (krperf_srq_valid(cb)) {
+		ret = ib_post_srq_recv(cb->srq, &cb->rq_wr, bad_wr);
+		if (ret) {
+			pr_warn("ib_post_srq_recv failed: %d\n", ret);
+			return ret;
+		}
+
+	} else {
+		ret = ib_post_recv(cb->qp, &cb->rq_wr, bad_wr);
+		if (ret) {
+			printk(KERN_ERR PFX "ib__post_recv failed: %d\n", ret);
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
 static void krping_cq_event_handler(struct ib_cq *cq, void *ctx)
 {
 	struct krping_cb *cb = ctx;
@@ -219,7 +249,7 @@ static void krping_cq_event_handler(struct ib_cq *cq, void *ctx)
 				goto error;
 			}
 
-			ret = ib_post_recv(cb->qp, &cb->rq_wr, &bad_wr);
+			ret = krperf_ib_srq_rq_post_recv(cb, &bad_wr);
 			if (ret) {
 				printk(KERN_ERR PFX "post recv error: %d\n", 
 				       ret);
@@ -457,14 +487,6 @@ static int krping_create_qp(struct krping_cb *cb)
 	}
 
 	return ret;
-}
-
-static inline bool krperf_srq_valid(struct krping_cb *cb)
-{
-        if (cb != NULL && cb->use_srq && cb->srq != NULL)
-                return true;
-
-        return false;
 }
 
 static void krperf_free_srq(struct krping_cb *cb)
@@ -1338,9 +1360,9 @@ static void krping_run_server(struct krping_cb *cb)
 		goto err1;
 	}
 
-	ret = ib_post_recv(cb->qp, &cb->rq_wr, &bad_wr);
+	ret = krperf_ib_srq_rq_post_recv(cb, &bad_wr);
 	if (ret) {
-		printk(KERN_ERR PFX "ib_post_recv failed: %d\n", ret);
+		printk(KERN_ERR PFX "krperf_ib_srq_rq_post_recv failed: %d\n", ret);
 		goto err2;
 	}
 
@@ -1636,7 +1658,7 @@ static void flush_qp(struct krping_cb *cb)
 	}
 
 	recv_wr.wr_id = 0xcafebabedeadbeef;
-	ret = ib_post_recv(cb->qp, &recv_wr, &recv_bad);
+	ret = krperf_ib_srq_rq_post_recv(cb, &recv_bad);
 	if (ret) {
 		printk(KERN_ERR PFX "%s post_recv failed ret %d\n", __func__, ret);
 		return;
@@ -1842,9 +1864,9 @@ static void krping_run_client(struct krping_cb *cb)
 		goto err1;
 	}
 
-	ret = ib_post_recv(cb->qp, &cb->rq_wr, &bad_wr);
+	ret = krperf_ib_srq_rq_post_recv(cb, &bad_wr);
 	if (ret) {
-		printk(KERN_ERR PFX "ib_post_recv failed: %d\n", ret);
+		printk(KERN_ERR PFX "krperf_ib_srq_rq_post_recv failed: %d\n", ret);
 		goto err2;
 	}
 
