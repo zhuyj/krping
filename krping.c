@@ -29,7 +29,7 @@
 #include "krping.h"
 
 #undef pr_fmt
-#define pr_fmt(fmt) KBUILD_MODNAME " L" __stringify(__LINE__) ": file:%s +%d caller:%ps " fmt, __FILE__, __LINE__, __builtin_return_address(0)
+#define pr_fmt(fmt) KBUILD_MODNAME " L" __stringify(__LINE__) ": file: %s +%d caller: %ps " fmt, __FILE__, __LINE__, __builtin_return_address(0)
 #define PFX "krping: "
 
 static int debug = 0;
@@ -537,16 +537,14 @@ static int krperf_alloc_srq(struct krping_cb *cb)
 	pr_info_once("SRQ in krperf is in experimental stage\n");
 
 	if (cb->srq) {
-		pr_warn("File: %s +%d func: %s, ib dev %s srq\n",
-				__FILE__, __LINE__, __func__, cb->pd->device->name);
+		pr_warn("ib dev %s srq\n", cb->pd->device->name);
 		return 0;
 	}
 
-	pr_warn("File: %s +%d func: %s, ib dev %s create srq\n",
-		__FILE__, __LINE__, __func__, cb->pd->device->name);
+	pr_warn("ib dev %s create srq\n", cb->pd->device->name);
 
 	if (!cb->pd) {
-		pr_warn("srq, file: %s +%d func: %s, pd NULL\n", __FILE__, __LINE__, __func__);
+		pr_warn("srq, pd NULL\n");
 		WARN_ON_ONCE(1);
 		return -EINVAL;
 	}
@@ -594,8 +592,7 @@ static int krping_setup_qp(struct krping_cb *cb, struct rdma_cm_id *cm_id)
 
 	ret = krperf_alloc_srq(cb);
 	if (ret) {
-		pr_warn("File: %s +%d func: %s, srq alloc failed: %d\n",
-				__FILE__, __LINE__, __func__, ret);
+		pr_warn("srq alloc failed: %d\n", ret);
 		return ret;
 	}
 
