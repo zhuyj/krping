@@ -27,10 +27,13 @@
 
 #include "getopt.h"
 #include "krping.h"
+#include "krperf_srq.h"
 
 #undef pr_fmt
 #define pr_fmt(fmt) KBUILD_MODNAME " L" __stringify(__LINE__) ": file: %s +%d caller: %ps " fmt, __FILE__, __LINE__, __builtin_return_address(0)
 #define PFX "krping: "
+
+static struct proc_dir_entry *krping_proc;
 
 static int debug = 0;
 module_param(debug, int, 0);
@@ -150,15 +153,7 @@ static int client_recv(struct krping_cb *cb, struct ib_wc *wc)
 
 	return 0;
 }
-
-static inline bool krperf_srq_valid(struct krping_cb *cb)
-{
-        if (cb != NULL && cb->use_srq && cb->srq != NULL)
-                return true;
-
-        return false;
-}
-
+#if 0
 static int krperf_ib_srq_rq_post_recv(struct krping_cb *cb, const struct ib_recv_wr **bad_wr)
 {
 	int ret = 0;
@@ -180,7 +175,7 @@ static int krperf_ib_srq_rq_post_recv(struct krping_cb *cb, const struct ib_recv
 
 	return 0;
 }
-
+#endif
 static void krping_cq_event_handler(struct ib_cq *cq, void *ctx)
 {
 	struct krping_cb *cb = ctx;
@@ -489,74 +484,12 @@ static int krping_create_qp(struct krping_cb *cb)
 	return ret;
 }
 
-static void krperf_free_srq(struct krping_cb *cb)
-{
-	if (!krperf_srq_valid(cb))
-		return;
-
-	ib_destroy_srq(cb->srq);
-	cb->srq = NULL;
-}
-
 static void krping_free_qp(struct krping_cb *cb)
 {
 	ib_destroy_qp(cb->qp);
 	krperf_free_srq(cb);
 	ib_destroy_cq(cb->cq);
 	ib_dealloc_pd(cb->pd);
-}
-
-static void krperf_srq_event(struct ib_event *event, void *ctx)
-{
-	switch (event->event) {
-	case IB_EVENT_SRQ_ERR:
-		pr_err("KRPERF: event IB_EVENT_SRQ_ERR unhandled\n");
-		break;
-	case IB_EVENT_SRQ_LIMIT_REACHED:
-		pr_err("KRPERF: reach SRQ_LIMIT, need to increase the value of sge\n");
-		break;
-	default:
-		break;
-	}
-}
-
-static int krperf_alloc_srq(struct krping_cb *cb)
-{
-	struct ib_srq_init_attr srq_attr = {
-		.event_handler = krperf_srq_event,
-		.srq_context = (void *)cb,
-		.attr.max_wr = cb->pd->device->attrs.max_srq_wr,
-		.attr.max_sge = cb->pd->device->attrs.max_srq_sge,
-		.attr.srq_limit = cb->pd->device->attrs.max_srq_sge / 3,
-		.srq_type = IB_SRQT_BASIC,
-	};
-
-	if (!cb->use_srq)
-		return 0;
-
-	pr_info_once("SRQ in krperf is in experimental stage\n");
-
-	if (cb->srq) {
-		pr_warn("ib dev %s srq\n", cb->pd->device->name);
-		return 0;
-	}
-
-	pr_warn("ib dev %s create srq\n", cb->pd->device->name);
-
-	if (!cb->pd) {
-		pr_warn("srq, pd NULL\n");
-		WARN_ON_ONCE(1);
-		return -EINVAL;
-	}
-
-	cb->srq = ib_create_srq(cb->pd, &srq_attr);
-
-	if (IS_ERR(cb->srq)) {
-		pr_debug("ib_create_srq() failed: %ld\n", PTR_ERR(cb->srq));
-		return PTR_ERR(cb->srq);
-	}
-
-	return 0;
 }
 
 static int krping_setup_qp(struct krping_cb *cb, struct rdma_cm_id *cm_id)

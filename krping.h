@@ -51,8 +51,6 @@ static DEFINE_MUTEX(krping_mutex);
  */
 static LIST_HEAD(krping_cbs);
 
-static struct proc_dir_entry *krping_proc;
-
 /*
  * Invoke like this, one on each side, using the server's address on
  * the RDMA device (iw%d):
