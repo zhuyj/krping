@@ -205,9 +205,9 @@ static void krping_cq_event_handler(struct ib_cq *cq, void *ctx)
 				DEBUG_LOG("cq flushed\n");
 				continue;
 			} else {
-				printk(KERN_ERR PFX "cq completion failed with "
-				       "wr_id %Lx status %d opcode %d vender_err %x\n",
-					wc.wr_id, wc.status, wc.opcode, wc.vendor_err);
+				pr_err("cq completion failed with "
+				       "wr_id %Lx status: %s opcode %d vender_err %x\n",
+					wc.wr_id, ib_wc_status_msg(wc.status), wc.opcode, wc.vendor_err);
 				goto error;
 			}
 		}
