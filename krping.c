@@ -153,29 +153,7 @@ static int client_recv(struct krping_cb *cb, struct ib_wc *wc)
 
 	return 0;
 }
-#if 0
-static int krperf_ib_srq_rq_post_recv(struct krping_cb *cb, const struct ib_recv_wr **bad_wr)
-{
-	int ret = 0;
 
-	if (krperf_srq_valid(cb)) {
-		ret = ib_post_srq_recv(cb->srq, &cb->rq_wr, bad_wr);
-		if (ret) {
-			pr_warn("ib_post_srq_recv failed: %d\n", ret);
-			return ret;
-		}
-
-	} else {
-		ret = ib_post_recv(cb->qp, &cb->rq_wr, bad_wr);
-		if (ret) {
-			printk(KERN_ERR PFX "ib__post_recv failed: %d\n", ret);
-			return ret;
-		}
-	}
-
-	return 0;
-}
-#endif
 static void krping_cq_event_handler(struct ib_cq *cq, void *ctx)
 {
 	struct krping_cb *cb = ctx;
@@ -525,19 +503,20 @@ static int krping_setup_qp(struct krping_cb *cb, struct rdma_cm_id *cm_id)
 
 	ret = krperf_alloc_srq(cb);
 	if (ret) {
-		pr_warn("srq alloc failed: %d\n", ret);
-		return ret;
+		pr_err("srq alloc failed: %d\n", ret);
+		goto err2;
 	}
 
 	ret = krping_create_qp(cb);
 	if (ret) {
 		printk(KERN_ERR PFX "krping_create_qp failed: %d\n", ret);
-		goto err2;
+		goto err3;
 	}
 	DEBUG_LOG("created qp %p\n", cb->qp);
 	return 0;
-err2:
+err3:
 	krperf_free_srq(cb);
+err2:
 	ib_destroy_cq(cb->cq);
 err1:
 	ib_dealloc_pd(cb->pd);
@@ -1238,7 +1217,6 @@ static int krping_bind_server(struct krping_cb *cb)
 {
 	struct sockaddr_storage sin;
 	int ret;
-
 
 	fill_sockaddr(&sin, cb);
 
