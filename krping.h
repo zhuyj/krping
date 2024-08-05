@@ -27,6 +27,7 @@ static const struct krping_option krping_opts[] = {
  	{"local_dma_lkey", OPT_NOPARAM, 'Z'},
  	{"read_inv", OPT_NOPARAM, 'R'},
  	{"fr", OPT_NOPARAM, 'f'},
+	{"srq", OPT_NOPARAM, 'q'},
 	{NULL, 0, 0}
 };
 

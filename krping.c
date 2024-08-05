@@ -1949,6 +1949,10 @@ static int krping_doit(char *cmd)
 			cb->frtest = 1;
 			DEBUG_LOG("fast-reg test!\n");
 			break;
+		case 'q':
+			cb->use_srq = true;
+			cb->srq = NULL;
+			break;
 		default:
 			printk(KERN_ERR PFX "unknown opt %s\n", optarg);
 			ret = -EINVAL;
