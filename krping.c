@@ -2055,7 +2055,7 @@ static ssize_t krping_write_proc(struct file * file, const char __user * buffer,
 	if (!try_module_get(THIS_MODULE))
 		return -ENODEV;
 
-	cmd = kmalloc(count, GFP_KERNEL);
+	cmd = kzalloc(count, GFP_KERNEL);
 	if (cmd == NULL) {
 		printk(KERN_ERR PFX "kmalloc failure\n");
 		return -ENOMEM;
