@@ -3,7 +3,7 @@ KOBJ=/lib/modules/`uname -r`/build
 
 
 obj-m += rdma_krping.o
-rdma_krping-y			:= getopt.o krping.o krperf_srq.o
+rdma_krping-y			:= getopt.o krperf.o krperf_srq.o
 
 default:
 	make -C $(KSRC) M=`pwd` modules
