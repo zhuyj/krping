@@ -1,12 +1,12 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 
 /*
- * lifted from krping.c
+ * lifted from krperf.c
  */
 #ifndef _KRPING_H
 #define _KRPING_H
 
-static const struct krping_option krping_opts[] = {
+static const struct krperf_option krperf_opts[] = {
 	{"count", OPT_INT, 'C'},
 	{"size", OPT_INT, 'S'},
 	{"addr", OPT_STRING, 'a'},
@@ -31,7 +31,7 @@ static const struct krping_option krping_opts[] = {
 	{NULL, 0, 0}
 };
 
-struct krping_stats {
+struct krperf_stats {
 	unsigned long long send_bytes;
 	unsigned long long send_msgs;
 	unsigned long long recv_bytes;
@@ -45,22 +45,22 @@ struct krping_stats {
 #define htonll(x) cpu_to_be64((x))
 #define ntohll(x) cpu_to_be64((x))
 
-static DEFINE_MUTEX(krping_mutex);
+static DEFINE_MUTEX(krperf_mutex);
 
 /*
- * List of running krping threads.
+ * List of running krperf threads.
  */
-static LIST_HEAD(krping_cbs);
+static LIST_HEAD(krperf_cbs);
 
 /*
  * Invoke like this, one on each side, using the server's address on
  * the RDMA device (iw%d):
  *
- * /bin/echo server,port=9999,addr=192.168.69.142,validate > /proc/krping  
- * /bin/echo client,port=9999,addr=192.168.69.142,validate > /proc/krping  
- * /bin/echo client,port=9999,addr6=2001:db8:0:f101::1,validate > /proc/krping
+ * /bin/echo server,port=9999,addr=192.168.69.142,validate > /proc/krperf  
+ * /bin/echo client,port=9999,addr=192.168.69.142,validate > /proc/krperf  
+ * /bin/echo client,port=9999,addr6=2001:db8:0:f101::1,validate > /proc/krperf
  *
- * krping "ping/pong" loop:
+ * krperf "ping/pong" loop:
  * 	client sends source rkey/addr/len
  *	server receives source rkey/add/len
  *	server rdma reads "ping" data from source
@@ -92,7 +92,7 @@ enum test_state {
 	ERROR
 };
 
-struct krping_rdma_info {
+struct krperf_rdma_info {
 	uint64_t buf;
 	uint32_t rkey;
 	uint32_t size;
@@ -107,7 +107,7 @@ struct krping_rdma_info {
 /*
  * Control block struct.
  */
-struct krping_cb {
+struct krperf_cb {
 	int server;			/* 0 iff client */
 	struct ib_cq *cq;
 	struct ib_pd *pd;
@@ -126,13 +126,13 @@ struct krping_cb {
 
 	struct ib_recv_wr rq_wr;	/* recv work request record */
 	struct ib_sge recv_sgl;		/* recv single SGE */
-	struct krping_rdma_info recv_buf __aligned(16);	/* malloc'd buffer */
+	struct krperf_rdma_info recv_buf __aligned(16);	/* malloc'd buffer */
 	u64 recv_dma_addr;
 	DEFINE_DMA_UNMAP_ADDR(recv_mapping);
 
 	struct ib_send_wr sq_wr;	/* send work requrest record */
 	struct ib_sge send_sgl;
-	struct krping_rdma_info send_buf __aligned(16); /* single send buf */
+	struct krperf_rdma_info send_buf __aligned(16); /* single send buf */
 	u64 send_dma_addr;
 	DEFINE_DMA_UNMAP_ADDR(send_mapping);
 
@@ -154,7 +154,7 @@ struct krping_cb {
 
 	enum test_state state;		/* used for cond/signalling */
 	wait_queue_head_t sem;
-	struct krping_stats stats;
+	struct krperf_stats stats;
 
 	uint16_t port;			/* dst port in NBO */
 	u8 addr[16];			/* dst addr in NBO */

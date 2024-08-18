@@ -9,7 +9,7 @@
 #include "getopt.h"
 
 /**
- *	krping_getopt - option parser
+ *	krperf_getopt - option parser
  *	@caller: name of the caller, for error messages
  *	@options: the options string
  *	@opts: an array of &struct option entries controlling parser operations
@@ -23,8 +23,8 @@
  *	Returns opts->val if a matching entry in the 'opts' array is found,
  *	0 when no more tokens are found, -1 if an error is encountered.
  */
-int krping_getopt(const char *caller, char **options, 
-		  const struct krping_option *opts, char **optopt, 
+int krperf_getopt(const char *caller, char **options,
+		  const struct krperf_option *opts, char **optopt,
 		  char **optarg, unsigned long *value)
 {
 	char *token;

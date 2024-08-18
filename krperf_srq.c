@@ -30,7 +30,7 @@
 #undef pr_fmt
 #define pr_fmt(fmt) KBUILD_MODNAME " L" __stringify(__LINE__) ": file: %s +%d caller: %ps " fmt, __FILE__, __LINE__, __builtin_return_address(0)
 
-void krperf_free_srq(struct krping_cb *cb)
+void krperf_free_srq(struct krperf_cb *cb)
 {
 	if (!krperf_srq_valid(cb))
 		return;
@@ -53,7 +53,7 @@ static void krperf_srq_event(struct ib_event *event, void *ctx)
 	}
 }
 
-int krperf_alloc_srq(struct krping_cb *cb)
+int krperf_alloc_srq(struct krperf_cb *cb)
 {
 	struct ib_srq_init_attr srq_attr = {
 		.event_handler = krperf_srq_event,
@@ -92,7 +92,7 @@ int krperf_alloc_srq(struct krping_cb *cb)
 	return 0;
 }
 
-int krperf_ib_srq_rq_post_recv(struct krping_cb *cb, const struct ib_recv_wr **bad_wr)
+int krperf_ib_srq_rq_post_recv(struct krperf_cb *cb, const struct ib_recv_wr **bad_wr)
 {
 	int ret = 0;
 
