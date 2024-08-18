@@ -1,7 +1,7 @@
 #ifndef _KRPERF_SRQ_H
 #define _KRPERF_SRQ_H
 
-#include "krping.h"
+#include "krperf.h"
 
 int krperf_alloc_srq(struct krping_cb *cb);
 void krperf_free_srq(struct krping_cb *cb);

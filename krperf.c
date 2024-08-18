@@ -26,12 +26,12 @@
 #include <rdma/rdma_cm.h>
 
 #include "getopt.h"
-#include "krping.h"
+#include "krperf.h"
 #include "krperf_srq.h"
 
 #undef pr_fmt
 #define pr_fmt(fmt) KBUILD_MODNAME " L" __stringify(__LINE__) ": file: %s +%d caller: %ps " fmt, __FILE__, __LINE__, __builtin_return_address(0)
-#define PFX "krping: "
+#define PFX "krperf: "
 
 static struct proc_dir_entry *krping_proc;
 
