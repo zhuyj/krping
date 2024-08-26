@@ -17,7 +17,6 @@
 #include <linux/ktime.h>
 #include <linux/random.h>
 #include <linux/signal.h>
-#include <linux/proc_fs.h>
 
 #include <asm/atomic.h>
 #include <asm/pci.h>
@@ -2063,7 +2062,6 @@ static int krperf_read_open(struct inode *inode, struct file *file)
 }
 
 static const struct proc_ops krperf_ops = {
-	// .owner = THIS_MODULE,
 	.proc_open = krperf_read_open,
 	.proc_read = seq_read,
 	.proc_write = krperf_write_proc,
