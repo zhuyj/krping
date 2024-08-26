@@ -34,6 +34,13 @@
 
 static struct proc_dir_entry *krperf_proc;
 
+static DEFINE_MUTEX(krperf_mutex);
+
+/*
+ * List of running krperf threads.
+ */
+static LIST_HEAD(krperf_cbs);
+
 static int debug = 0;
 module_param(debug, int, 0);
 MODULE_PARM_DESC(debug, "Debug level (0=none, 1=all)");

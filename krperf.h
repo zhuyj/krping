@@ -45,13 +45,6 @@ struct krperf_stats {
 #define htonll(x) cpu_to_be64((x))
 #define ntohll(x) cpu_to_be64((x))
 
-static DEFINE_MUTEX(krperf_mutex);
-
-/*
- * List of running krperf threads.
- */
-static LIST_HEAD(krperf_cbs);
-
 /*
  * Invoke like this, one on each side, using the server's address on
  * the RDMA device (iw%d):
