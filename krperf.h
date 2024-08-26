@@ -3,8 +3,8 @@
 /*
  * lifted from krperf.c
  */
-#ifndef _KRPING_H
-#define _KRPING_H
+#ifndef _KRPERF_H
+#define _KRPERF_H
 
 static const struct krperf_option krperf_opts[] = {
 	{"count", OPT_INT, 'C'},
@@ -187,4 +187,4 @@ struct krperf_cb {
 	struct ib_srq			*srq;
 };
 
-#endif /* _KRPING_H */
+#endif /* _KRPERF_H */
