@@ -35,12 +35,12 @@
 
 static struct proc_dir_entry *krperf_proc;
 
-static DEFINE_MUTEX(krperf_mutex);
+DEFINE_MUTEX(krperf_mutex);
 
 /*
  * List of running krperf threads.
  */
-static LIST_HEAD(krperf_cbs);
+LIST_HEAD(krperf_cbs);
 
 static int debug = 0;
 module_param(debug, int, 0);
@@ -1995,42 +1995,6 @@ out:
 	mutex_unlock(&krperf_mutex);
 	kfree(cb);
 	return ret;
-}
-
-/*
- * Read proc returns stats for each device.
- */
-static int krperf_read_proc(struct seq_file *seq, void *v)
-{
-	struct krperf_cb *cb;
-	int num = 1;
-
-	if (!try_module_get(THIS_MODULE))
-		return -ENODEV;
-	DEBUG_LOG(KERN_INFO PFX "proc read called...\n");
-	mutex_lock(&krperf_mutex);
-	list_for_each_entry(cb, &krperf_cbs, list) {
-		if (cb->pd) {
-			seq_printf(seq,
-			     "%d-%s %lld %lld %lld %lld %lld %lld %lld %lld\n",
-			     num++, cb->pd->device->name, cb->stats.send_bytes,
-			     cb->stats.send_msgs, cb->stats.recv_bytes,
-			     cb->stats.recv_msgs, cb->stats.write_bytes,
-			     cb->stats.write_msgs,
-			     cb->stats.read_bytes,
-			     cb->stats.read_msgs);
-		} else {
-			seq_printf(seq, "%d listen\n", num++);
-		}
-	}
-	mutex_unlock(&krperf_mutex);
-	module_put(THIS_MODULE);
-	return 0;
-}
-
-static int krperf_read_open(struct inode *inode, struct file *file)
-{
-        return single_open(file, krperf_read_proc, inode->i_private);
 }
 
 static const struct proc_ops krperf_ops = {
