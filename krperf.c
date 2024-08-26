@@ -27,6 +27,7 @@
 #include "getopt.h"
 #include "krperf.h"
 #include "krperf_srq.h"
+#include "krperf_proc.h"
 
 #undef pr_fmt
 #define pr_fmt(fmt) KBUILD_MODNAME " L" __stringify(__LINE__) ": file: %s +%d caller: %ps " fmt, __FILE__, __LINE__, __builtin_return_address(0)
@@ -1807,7 +1808,7 @@ err1:
 	krperf_free_qp(cb);
 }
 
-static int krperf_doit(char *cmd)
+int krperf_doit(char *cmd)
 {
 	struct krperf_cb *cb;
 	int op;
@@ -2025,42 +2026,6 @@ static int krperf_read_proc(struct seq_file *seq, void *v)
 	mutex_unlock(&krperf_mutex);
 	module_put(THIS_MODULE);
 	return 0;
-}
-
-/*
- * Write proc is used to start a ping client or server.
- */
-static ssize_t krperf_write_proc(struct file * file, const char __user * buffer,
-		size_t count, loff_t *ppos)
-{
-	char *cmd;
-	int rc;
-
-	if (!try_module_get(THIS_MODULE))
-		return -ENODEV;
-
-	cmd = kzalloc(count, GFP_KERNEL);
-	if (cmd == NULL) {
-		printk(KERN_ERR PFX "kmalloc failure\n");
-		return -ENOMEM;
-	}
-	if (copy_from_user(cmd, buffer, count)) {
-		kfree(cmd);
-		return -EFAULT;
-	}
-
-	/*
-	 * remove the \n.
-	 */
-	cmd[count - 1] = 0;
-	DEBUG_LOG(KERN_INFO PFX "proc write |%s|\n", cmd);
-	rc = krperf_doit(cmd);
-	kfree(cmd);
-	module_put(THIS_MODULE);
-	if (rc)
-		return rc;
-	else
-		return (int) count;
 }
 
 static int krperf_read_open(struct inode *inode, struct file *file)
