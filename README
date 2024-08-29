@@ -1,18 +1,17 @@
-		Kernel Mode RDMA Ping Module
-		   Steve Wise - 8/2009
+		Kernel Mode RDMA Perf/Ping Module
 
 ---
-Updated 8/2016
+Updated 8/2024
 ---
 
 ============
 Introduction
 ============
 
-The krping module is a kernel loadable module that utilizes the Open
-Fabrics verbs to implement a client/server ping/pong program.  The module
-was implemented as a test vehicle for working with the iwarp branch of
-the OFA project.
+The krperf module is a kernel loadable module that utilizes the Open
+Fabrics verbs to implement a client/server ping/pong perf program. The
+module was implemented as a test vehicle for working with the mlx4/5
+IB branch of the OFA project.
 
 The goals of this program include:
 
@@ -30,11 +29,11 @@ recv, rdma read, rdma write, and completion notifications.
 - Just a test utility...nothing more.
 
 This module allows establishing connections and running ping/pong tests
-via a /proc entry called /proc/krping.  This simple mechanism allows
+via a /proc entry called /proc/krperf.  This simple mechanism allows
 starting many kernel threads concurrently and avoids the need for a user
 space application.
 
-The krping module is designed to utilize all the major DTO operations:
+The krperf module is designed to utilize all the major DTO operations:
 send, recv, rdma read, and rdma write.  Its goal was to test the API
 and as such is not necessarily an efficient test.  Once the connection
 is established, the client and server begin a ping/pong loop:
@@ -63,26 +62,26 @@ Validate data in source and sink buffers
 
 
 ============
-To build/install the krping module
+To build/install the krperf module
 ============
 
-# git clone git://git.openfabrics.org/~swise/krping
-# cd krping
+# git clone https://github.com/zhuyj/krperf.git
+# cd krperf
 <edit Makefile and set KSRC accordingly>
 # make && make install
-# modprobe rdma_krping
+# modprobe rdma_krperf
 
 ============
-Using Krping
+Using krperf
 ============
 
 Communication from user space is done via the /proc filesystem.
-Krping exports file /proc/krping.  Writing commands in ascii format to
-/proc/krping will start krping threads in the kernel.  The thread issuing
-the write to /proc/krping is used to run the krping test, so it will
+krperf exports file /proc/krperf.  Writing commands in ascii format to
+/proc/krperf will start krperf threads in the kernel.  The thread issuing
+the write to /proc/krperf is used to run the krperf test, so it will
 block until the test completes, or until the user interrupts the write.
 
-Here is a simple example to start an rping test using the rdma_krping
+Here is a simple example to start an rping test using the rdma_krperf
 module.  The server's address is 192.168.69.127.  The client will
 connect to this address at port 9999 and issue 100 ping/pong messages.
 This example assumes you have two systems connected via IB and the
@@ -90,22 +89,22 @@ IPoverIB devices are configured on the 192.168.69/24 subnet accordingly.
 
 Server:
 
-# modprobe rdma_krping
-# echo "server,addr=192.168.69.127,port=9999" >/proc/krping
+# modprobe rdma_krperf
+# echo "server,addr=192.168.69.127,port=9999,verbose" >/proc/krperf
 
 
-The echo command above will block until the krping test completes,
+The echo command above will block until the krperf test completes,
 or the user hits ctrl-c.
 
 On the client:
 
-# modprobe rdma_krping
-# echo "client,addr=192.168.69.127,port=9999,count=100" >/proc/krping
+# modprobe rdma_krperf
+# echo "client,addr=192.168.69.127,port=9999,count=100,verbose" >/proc/krperf
 
 Just like on the server, the echo command above will block until the
-krping test completes, or the user hits ctrl-c.
+krperf test completes, or the user hits ctrl-c.
 
-The syntax for krping commands is a string of options separated by commas.
+The syntax for krperf commands is a string of options separated by commas.
 Options can be single keywords, or in the form: option=operand.
 
 Operands can be integers or strings.
@@ -116,41 +115,41 @@ it on both the server and client command lines.
 
 Opcode		Operand Type	Description
 ------------------------------------------------------------------------
-client		none		Initiate a client side krping thread.
-server		none		Initiate a server side krping thread.
-addr		string		The server's IP address in dotted 
-				decimal format.  Note the server can
+client		none		Initiate a client side krperf thread.
+server		none		Initiate a server side krperf thread.
+addr		string		The server's IP address in dotted
+				decimal format. Note the server can
 				use 0.0.0.0 to bind to all devices.
-port		integer		The server's port number in host byte 
+port		integer		The server's port number in host byte
 				order.
-count		integer		The number of rping iterations to 
-				perform before shutting down the test.  
+count		integer		The number of rping iterations to
+				perform before shutting down the test.
 				If unspecified, the count is infinite.
-size		integer		The size of the rping data.  Default for 
-				rping is 65 bytes.
-verbose		none		Enables printk()s that dump the rping 
+size		integer		The size of the rping data. Default for
+				krperf is 65 bytes.
+verbose		none		Enables printk()s that dump the rping
 				data. Use with caution!
 validate	none		Enables validating the rping data on
-				each iteration to detect data 
+				each iteration to detect data
 				corruption.
-mem_mode	string		Determines how memory will be 
+mem_mode	string		Determines how memory will be
 				registered.  Modes include dma,
 				and reg.  Default is dma.
-server_inv 	none		Valid only in reg mr mode, this 
+server_inv 	none		Valid only in reg mr mode, this
 				option enables invalidating the
-				client's reg mr via 
+				client's reg mr via
 				SEND_WITH_INVALIDATE messages from
 				the server.
-local_dma_lkey	none		Use the local dma lkey for the source 
+local_dma_lkey	none		Use the local dma lkey for the source
 				of writes and sends, and in recvs
 read_inv	none		Server will use READ_WITH_INV. Only
 				valid in reg mem_mode.
-				
+
 ============
 Memory Usage:
 ============
 
-The krping client uses 4 memory areas:
+The krperf client uses 4 memory areas:
 
 start_buf - the source of the ping data.  This buffer is advertised to
 the server at the start of each iteration, and the server rdma reads
@@ -159,14 +158,14 @@ the ping data from this buffer over the wire.
 rdma_buf  - the sink of the ping data.  This buffer is advertised to the
 server each iteration, and the server rdma writes the ping data that it
 read from the start buffer into this buffer.  The start_buf and rdma_buf
-contents are then compared if the krping validate option is specified.
+contents are then compared if the krperf validate option is specified.
 
 recv_buf  - used to recv "go ahead" SEND from the server.  
 
 send_buf  - used to advertise the rdma buffers to the server via SEND
 messages.
 
-The krping server uses 3 memory areas:
+The krperf server uses 3 memory areas:
 
 rdma_buf  - used as the sink of the RDMA READ to pull the ping data
 from the client, and then used as the source of an RDMA WRITE to
@@ -200,7 +199,7 @@ invalidates the mr using the IB_WR_LOCAL_INV work request.
 On the server side, reg mem_mode causes the server to use the
 reg_mr rkey for its rdma_buf buffer IO.  Before each rdma read and
 rdma write, the server will post an IB_WR_LOCAL_INV + IB_WR_REG_MR
-WR chain to register the buffer with a new key.  If the krping read-inv
+WR chain to register the buffer with a new key.  If the krperf read-inv
 option is set then the server will use IB_WR_READ_WITH_INV to do the
 rdma read and skip the IB_WR_LOCAL_INV wr before re-registering the
 buffer for the subsequent rdma write operation.
@@ -209,15 +208,15 @@ buffer for the subsequent rdma write operation.
 Stats
 ============
 
-While krping threads are executing, you can obtain statistics on the
-thread by reading from the /proc/krping file.  If you cat /proc/krping,
-you will dump IO statistics for each running krping thread.  The format
+While krperf threads are executing, you can obtain statistics on the
+thread by reading from the /proc/krperf file.  If you cat /proc/krperf,
+you will dump IO statistics for each running krperf thread.  The format
 is one thread per line, and each thread contains the following stats
 separated by white spaces:
 
 Statistic		Description
 ---------------------------------------------------------------------
-Name			krping thread number and device being used.
+Name			krperf thread number and device being used.
 Send Bytes		Number of bytes transferred in SEND WRs.
 Send Messages		Number of SEND WRs posted
 Recv Bytes		Number of bytes received via RECV completions.
@@ -227,9 +226,9 @@ RDMA WRITE Messages	Number of RDMA WRITE WRs posted.
 RDMA READ Bytes		Number of bytes transferred via RDMA READ WRs.
 RDMA READ Messages	Number of RDMA READ WRs posted.
 
-Here is an example of the server side output for 5 krping threads:
+Here is an example of the server side output for 5 krperf threads:
 
-# cat /proc/krping
+# cat /proc/krperf
 1-amso0 0 0 16 1 12583960576 192016 0 0
 2-mthca0 0 0 16 1 60108570624 917184 0 0
 3-mthca0 0 0 16 1 59106131968 901888 0 0
@@ -260,11 +259,11 @@ and compute RTT/2 or Gbps results.
 
 Use these at your own risk.
 
-Server: echo "server,addr=10.95.3.140,port=9999" > /proc/krping
+Server: echo "server,addr=10.95.3.140,port=9999" > /proc/krperf
 ib
 
-[27069.884232] krping: proc read called...
-[27220.945037] krping: proc write |server,addr=10.95.3.140,port=9999|
+[27069.884232] krperf: proc read called...
+[27220.945037] krperf: proc write |server,addr=10.95.3.140,port=9999|
 [27220.945154] server
 [27220.945243] ipaddr (10.95.3.140)
 [27220.947003] port 9999
@@ -277,16 +276,16 @@ ib
 [27240.830896] created pd 000000008ee3ee0a
 [27240.831254] created cq 000000007afca1ac
 [27240.831556] created qp 000000000664f622
-[27240.831651] krping: krping_setup_buffers called on cb 000000003586dd51
-[27240.831788] krping: reg rkey 0x18021010 page_list_len 1
-[27240.831914] krping: allocated & registered buffers...
+[27240.831651] krperf: krperf_setup_buffers called on cb 000000003586dd51
+[27240.831788] krperf: reg rkey 0x18021010 page_list_len 1
+[27240.831914] krperf: allocated & registered buffers...
 [27240.832012] accepting client connection request
 [27240.832466] cma_event type 9 cma_id 00000000a3734083 (child)
 [27240.832545] recv completion
 [27240.832571] Received rkey 20021101 addr c28e76d80 len 64 from peer
 [27240.832576] ESTABLISHED
 [27240.832869] server received sink adv
-[27240.832977] krping: post_inv = 1, reg_mr new rkey 0x18021001 pgsz 4096 len 64 iova_start 429f4d340
+[27240.832977] krperf: post_inv = 1, reg_mr new rkey 0x18021001 pgsz 4096 len 64 iova_start 429f4d340
 [27240.833134] server posted rdma read req
 [27240.833153] rdma read completion
 [27240.833324] server received read complete
@@ -295,7 +294,7 @@ ib
 [27240.833651] recv completion
 [27240.833755] Received rkey 20021102 addr c28e76300 len 64 from peer
 [27240.833866] server received sink adv
-[27240.833963] krping: post_inv = 0, reg_mr new rkey 0x18021002 pgsz 4096 len 64 iova_start 429f4d340
+[27240.833963] krperf: post_inv = 0, reg_mr new rkey 0x18021002 pgsz 4096 len 64 iova_start 429f4d340
 [27240.834102] rdma write from lkey 18021002 laddr 429f4d340 len 64
 [27240.834213] rdma write completion
 [27240.834330] server rdma write complete
@@ -304,7 +303,7 @@ ib
 [27240.834654] recv completion
 [27240.834743] Received rkey 20021103 addr c28e76d80 len 64 from peer
 [27240.834849] server received sink adv
-[27240.834945] krping: post_inv = 1, reg_mr new rkey 0x18021003 pgsz 4096 len 64 iova_start 429f4d340
+[27240.834945] krperf: post_inv = 1, reg_mr new rkey 0x18021003 pgsz 4096 len 64 iova_start 429f4d340
 [27240.835085] server posted rdma read req
 [27240.835097] rdma read completion
 [27240.835274] server received read complete
@@ -313,7 +312,7 @@ ib
 [27240.835598] recv completion
 [27240.835687] Received rkey 20021104 addr c28e76300 len 64 from peer
 [27240.835793] server received sink adv
-[27240.835888] krping: post_inv = 0, reg_mr new rkey 0x18021004 pgsz 4096 len 64 iova_start 429f4d340
+[27240.835888] krperf: post_inv = 0, reg_mr new rkey 0x18021004 pgsz 4096 len 64 iova_start 429f4d340
 [27240.836026] rdma write from lkey 18021004 laddr 429f4d340 len 64
 [27240.836137] rdma write completion
 [27240.836234] server rdma write complete
@@ -322,7 +321,7 @@ ib
 [27240.836560] recv completion
 [27240.836656] Received rkey 20021105 addr c28e76d80 len 64 from peer
 [27240.836781] server received sink adv
-[27240.836876] krping: post_inv = 1, reg_mr new rkey 0x18021005 pgsz 4096 len 64 iova_start 429f4d340
+[27240.836876] krperf: post_inv = 1, reg_mr new rkey 0x18021005 pgsz 4096 len 64 iova_start 429f4d340
 [27240.837015] server posted rdma read req
 [27240.837028] rdma read completion
 [27240.837206] server received read complete
@@ -331,23 +330,23 @@ ib
 [27240.837530] recv completion
 [27240.837619] Received rkey 20021106 addr c28e76300 len 64 from peer
 [27240.837725] server received sink adv
-[27240.837820] krping: post_inv = 0, reg_mr new rkey 0x18021006 pgsz 4096 len 64 iova_start 429f4d340
+[27240.837820] krperf: post_inv = 0, reg_mr new rkey 0x18021006 pgsz 4096 len 64 iova_start 429f4d340
 [27240.837973] rdma write from lkey 18021006 laddr 429f4d340 len 64
 [27240.838082] rdma write completion
 [27240.838180] server rdma write complete
 [27240.838276] server posted go ahead
 [27240.838285] send completion
 [27240.838781] cma_event type 10 cma_id 00000000a3734083 (child)
-[27240.838882] krping: DISCONNECT EVENT...
-[27240.839000] krping: wait for RDMA_READ_ADV state 10
-[27240.839175] krping: cq completion in ERROR state
-[27240.839338] krping_free_buffers called on cb 000000003586dd51
+[27240.838882] krperf: DISCONNECT EVENT...
+[27240.839000] krperf: wait for RDMA_READ_ADV state 10
+[27240.839175] krperf: cq completion in ERROR state
+[27240.839338] krperf_free_buffers called on cb 000000003586dd51
 [27240.839748] destroy cm_id 000000002b46f391
 
-Client: echo "client,addr=10.95.3.140,port=9999,count=3" > /proc/krping
+Client: echo "client,addr=10.95.3.140,port=9999,count=3" > /proc/krperf
 ib
-[29292.878783] krping: proc read called...
-[29450.905890] krping: proc write |client,addr=10.95.3.140,port=9999,count=3|
+[29292.878783] krperf: proc read called...
+[29450.905890] krperf: proc write |client,addr=10.95.3.140,port=9999,count=3|
 [29450.905905] client
 [29450.905908] ipaddr (10.95.3.140)
 [29450.905910] port 9999
@@ -360,38 +359,38 @@ ib
 [29450.906141] created pd 0000000050f8ace5
 [29450.906332] created cq 000000001916766c
 [29450.906557] created qp 000000006ed264fa
-[29450.906558] krping: krping_setup_buffers called on cb 00000000fd924db6
-[29450.906595] krping: reg rkey 0x20021110 page_list_len 1
-[29450.906597] krping: allocated & registered buffers...
+[29450.906558] krperf: krperf_setup_buffers called on cb 00000000fd924db6
+[29450.906595] krperf: reg rkey 0x20021110 page_list_len 1
+[29450.906597] krperf: allocated & registered buffers...
 [29450.908793] cma_event type 9 cma_id 000000000c9829b2 (parent)
 [29450.908800] ESTABLISHED
 [29450.908814] rdma_connect successful
-[29450.908822] krping: post_inv = 1, reg_mr new rkey 0x20021101 pgsz 4096 len 64 iova_start c28e76d80
+[29450.908822] krperf: post_inv = 1, reg_mr new rkey 0x20021101 pgsz 4096 len 64 iova_start c28e76d80
 [29450.908828] RDMA addr c28e76d80 rkey 20021101 len 64
 [29450.908849] send completion
 [29450.909868] recv completion
-[29450.909972] krping: post_inv = 1, reg_mr new rkey 0x20021102 pgsz 4096 len 64 iova_start c28e76300
+[29450.909972] krperf: post_inv = 1, reg_mr new rkey 0x20021102 pgsz 4096 len 64 iova_start c28e76300
 [29450.909986] RDMA addr c28e76300 rkey 20021102 len 64
 [29450.910006] send completion
 [29450.910872] recv completion
-[29450.910976] krping: post_inv = 1, reg_mr new rkey 0x20021103 pgsz 4096 len 64 iova_start c28e76d80
+[29450.910976] krperf: post_inv = 1, reg_mr new rkey 0x20021103 pgsz 4096 len 64 iova_start c28e76d80
 [29450.910989] RDMA addr c28e76d80 rkey 20021103 len 64
 [29450.911008] send completion
 [29450.911817] recv completion
-[29450.911919] krping: post_inv = 1, reg_mr new rkey 0x20021104 pgsz 4096 len 64 iova_start c28e76300
+[29450.911919] krperf: post_inv = 1, reg_mr new rkey 0x20021104 pgsz 4096 len 64 iova_start c28e76300
 [29450.911933] RDMA addr c28e76300 rkey 20021104 len 64
 [29450.911952] send completion
 [29450.912777] recv completion
-[29450.912882] krping: post_inv = 1, reg_mr new rkey 0x20021105 pgsz 4096 len 64 iova_start c28e76d80
+[29450.912882] krperf: post_inv = 1, reg_mr new rkey 0x20021105 pgsz 4096 len 64 iova_start c28e76d80
 [29450.912895] RDMA addr c28e76d80 rkey 20021105 len 64
 [29450.912914] send completion
 [29450.913748] recv completion
-[29450.913850] krping: post_inv = 1, reg_mr new rkey 0x20021106 pgsz 4096 len 64 iova_start c28e76300
+[29450.913850] krperf: post_inv = 1, reg_mr new rkey 0x20021106 pgsz 4096 len 64 iova_start c28e76300
 [29450.913865] RDMA addr c28e76300 rkey 20021106 len 64
 [29450.913884] send completion
 [29450.914721] recv completion
 [29450.914914] cq flushed
-[29450.915115] krping_free_buffers called on cb 00000000fd924db6
+[29450.915115] krperf_free_buffers called on cb 00000000fd924db6
 [29450.915399] destroy cm_id 000000000c9829b2
 
 END-OF-FILE
