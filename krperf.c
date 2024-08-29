@@ -1997,18 +1997,10 @@ out:
 	return ret;
 }
 
-static const struct proc_ops krperf_ops = {
-	.proc_open = krperf_read_open,
-	.proc_read = seq_read,
-	.proc_write = krperf_write_proc,
-	.proc_lseek  = seq_lseek,
-	.proc_release = single_release,
-};
-
 static int __init krperf_init(void)
 {
 	DEBUG_LOG("krperf_init\n");
-	krperf_proc = proc_create("krperf", 0666, NULL, &krperf_ops);
+	krperf_proc = krperf_proc_create();
 	if (krperf_proc == NULL) {
 		printk(KERN_ERR PFX "cannot create /proc/krperf\n");
 		return -ENOMEM;

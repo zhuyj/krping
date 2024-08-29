@@ -4,6 +4,7 @@
 #include <linux/seq_file.h>
 #include <rdma/ib_verbs.h>
 #include <rdma/rdma_cm.h>
+#include <linux/proc_fs.h>
 
 #include "krperf.h"
 
@@ -14,7 +15,7 @@ extern struct list_head krperf_cbs;
 /*
  * Write proc is used to start a ping client or server.
  */
-ssize_t krperf_write_proc(struct file * file, const char __user * buffer,
+static ssize_t krperf_write_proc(struct file * file, const char __user * buffer,
 		size_t count, loff_t *ppos)
 {
 	char *cmd;
@@ -81,8 +82,27 @@ static int krperf_read_proc(struct seq_file *seq, void *v)
 	return 0;
 }
 
-int krperf_read_open(struct inode *inode, struct file *file)
+static int krperf_read_open(struct inode *inode, struct file *file)
 {
         return single_open(file, krperf_read_proc, inode->i_private);
 }
 
+static const struct proc_ops krperf_ops = {
+	.proc_open = krperf_read_open,
+	.proc_read = seq_read,
+	.proc_write = krperf_write_proc,
+	.proc_lseek  = seq_lseek,
+	.proc_release = single_release,
+};
+
+struct proc_dir_entry *krperf_proc_create(void)
+{
+	struct proc_dir_entry *krperf_proc = NULL;
+
+	krperf_proc = proc_create("krperf", 0666, NULL, &krperf_ops);
+	if (krperf_proc == NULL) {
+		pr_err("cannot create /proc/krperf\n");
+		return ERR_PTR(-ENOMEM);
+	}
+	return krperf_proc;
+}
