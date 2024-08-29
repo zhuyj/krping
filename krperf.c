@@ -33,8 +33,6 @@
 #define pr_fmt(fmt) KBUILD_MODNAME " L" __stringify(__LINE__) ": file: %s +%d caller: %ps " fmt, __FILE__, __LINE__, __builtin_return_address(0)
 #define PFX "krperf: "
 
-static struct proc_dir_entry *krperf_proc;
-
 DEFINE_MUTEX(krperf_mutex);
 
 /*
@@ -1999,6 +1997,8 @@ out:
 
 static int __init krperf_init(void)
 {
+	struct proc_dir_entry *krperf_proc = NULL;
+
 	DEBUG_LOG("krperf_init\n");
 	krperf_proc = krperf_proc_create();
 	if (krperf_proc == NULL) {
