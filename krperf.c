@@ -24,7 +24,7 @@
 #include <rdma/ib_verbs.h>
 #include <rdma/rdma_cm.h>
 
-#include "getopt.h"
+#include "krperf_getopt.h"
 #include "krperf.h"
 #include "krperf_srq.h"
 #include "krperf_proc.h"
