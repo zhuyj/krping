@@ -1,8 +1,8 @@
 /*
  * lifted from fs/ncpfs/getopt.c
  */
-#ifndef _KRPING_GETOPT_H
-#define _KRPING_GETOPT_H
+#ifndef _KRPERF_GETOPT_H
+#define _KRPERF_GETOPT_H
 
 #define OPT_NOPARAM	1
 #define OPT_INT		2
@@ -41,4 +41,4 @@ static const struct krperf_option krperf_opts[] = {
 extern int krperf_getopt(const char *caller, char **options, const struct krperf_option *opts,
 		      char **optopt, char **optarg, unsigned long *value);
 
-#endif /* _KRPING_GETOPT_H */
+#endif /* _KRPERF_GETOPT_H */

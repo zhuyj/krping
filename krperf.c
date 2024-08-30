@@ -1347,7 +1347,7 @@ static void krperf_test_client(struct krperf_cb *cb)
 		if (cb->verbose)
 			printk(KERN_INFO PFX "ping data (64B max): |%.64s|\n",
 				cb->rdma_buf);
-#ifdef SLOW_KRPING
+#ifdef SLOW_KRPERF
 		wait_event_interruptible_timeout(cb->sem, cb->state == ERROR, HZ);
 #endif
 	}
