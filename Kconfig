@@ -2,4 +2,4 @@ config KRPERF
 	tristate "Kernel RDMA Perf/Ping Module"
 	depends on INFINIBAND 
 	---help---
-	  Test module implementing a RDMA perf/ping client/server.
+	  Development tool module implementing a RDMA perf/ping client/server.
