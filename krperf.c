@@ -1389,57 +1389,6 @@ static void krperf_rlat_test_client(struct krperf_cb *cb)
 		krperf_cq_event_handler(cb->cq, cb);
 	}
 
-#if 0
-{
-	int i;
-	ktime_t start, stop;
-	time_t sec;
-	suseconds_t usec;
-	unsigned long long elapsed;
-	struct ib_wc wc;
-	struct ib_send_wr *bad_wr;
-	int ne;
-	
-	cb->rdma_sq_wr.wr.opcode = IB_WR_RDMA_WRITE;
-	cb->rdma_sq_wr.rkey = cb->remote_rkey;
-	cb->rdma_sq_wr.remote_addr = cb->remote_addr;
-	cb->rdma_sq_wr.wr.sg_list->length = 0;
-	cb->rdma_sq_wr.wr.num_sge = 0;
-
-	start = ktime_get();
-	for (i=0; i < 100000; i++) {
-		if (ib_post_send(cb->qp, &cb->rdma_sq_wr.wr, &bad_wr)) {
-			pr_err( "Couldn't post send\n");
-			return;
-		}
-		do {
-			ne = ib_poll_cq(cb->cq, 1, &wc);
-		} while (ne == 0);
-		if (ne < 0) {
-			pr_err("poll CQ failed %d\n", ne);
-			return;
-		}
-		if (wc.status != IB_WC_SUCCESS) {
-			pr_err("Completion wth error at %s:\n",
-				cb->server ? "server" : "client");
-			pr_err("Failed status %d: wr_id %d\n",
-				wc.status, (int) wc.wr_id);
-			return;
-		}
-	}
-	stop = ktime_get();
-	
-	if (stop.tv_usec < start.tv_usec) {
-		stop.tv_usec += 1000000;
-		stop.tv_sec  -= 1;
-	}
-	sec     = stop.tv_sec - start.tv_sec;
-	usec    = stop.tv_usec - start.tv_usec;
-	elapsed = sec * 1000000 + usec;
-	pr_err("0B-write-lat iters 100000 usec %llu\n", elapsed);
-}
-#endif
-
 	rlat_test(cb);
 }
 
@@ -1781,14 +1730,138 @@ err1:
 	krperf_free_qp(cb);
 }
 
+static int krperf_parse(char *cmd, struct krperf_cb *cb)
+{
+	unsigned long optint;
+	char *optarg;
+	int ret = 0;
+	char *scope;
+	int op;
+
+	while ((op = krperf_getopt("krperf", &cmd, krperf_opts, NULL, &optarg,
+			      &optint)) != 0) {
+		switch (op) {
+		case 'a':
+			cb->addr_str = optarg;
+			in4_pton(optarg, -1, cb->addr, -1, NULL);
+			cb->addr_type = AF_INET;
+			DEBUG_LOG("ipaddr (%s)\n", optarg);
+			break;
+		case 'A':
+			cb->addr_str = optarg;
+			scope = strstr(optarg, "%");
+			if (scope != NULL) {
+				*scope++ = 0;
+				strncpy(cb->ip6_ndev_name, scope,
+					sizeof(cb->ip6_ndev_name));
+				/* force zero-termination */
+				cb->ip6_ndev_name[
+				        sizeof(cb->ip6_ndev_name) - 1] = 0;
+			}
+			in6_pton(optarg, -1, cb->addr, -1, NULL);
+			cb->addr_type = AF_INET6;
+			DEBUG_LOG("ipv6addr (%s)\n", optarg);
+			break;
+		case 'p':
+			cb->port = htons(optint);
+			DEBUG_LOG("port %d\n", (int)optint);
+			break;
+		case 'P':
+			cb->poll = 1;
+			DEBUG_LOG("server\n");
+			break;
+		case 's':
+			cb->server = 1;
+			DEBUG_LOG("server\n");
+			break;
+		case 'c':
+			cb->server = 0;
+			DEBUG_LOG("client\n");
+			break;
+		case 'S':
+			cb->size = optint;
+			if ((cb->size < 1) || (cb->size > RPING_BUFSIZE)) {
+				pr_err("Invalid size %d (valid range is 1 to %d)\n",
+				       cb->size, RPING_BUFSIZE);
+				ret = EINVAL;
+			} else {
+				DEBUG_LOG("size %d\n", (int)optint);
+			}
+			break;
+		case 'C':
+			cb->count = optint;
+			if (cb->count < 0) {
+				pr_err("Invalid count %d\n", cb->count);
+				ret = EINVAL;
+			} else {
+				DEBUG_LOG("count %d\n", (int) cb->count);
+			}
+			break;
+		case 'v':
+			cb->verbose++;
+			DEBUG_LOG("verbose\n");
+			break;
+		case 'V':
+			cb->validate++;
+			DEBUG_LOG("validate data\n");
+			break;
+		case 'l':
+			cb->wlat++;
+			break;
+		case 'L':
+			cb->rlat++;
+			break;
+		case 'B':
+			cb->bw++;
+			break;
+		case 'd':
+			cb->duplex++;
+			break;
+		case 'I':
+			cb->server_invalidate = 1;
+			break;
+		case 't':
+			cb->tos = optint;
+			DEBUG_LOG("type of service, tos=%d\n", (int) cb->tos);
+			break;
+		case 'T':
+			cb->txdepth = optint;
+			DEBUG_LOG("txdepth %d\n", (int) cb->txdepth);
+			break;
+		case 'Z':
+			cb->local_dma_lkey = 1;
+			DEBUG_LOG("using local dma lkey\n");
+			break;
+		case 'R':
+			cb->read_inv = 1;
+			DEBUG_LOG("using read-with-inv\n");
+			break;
+		case 'f':
+			cb->frtest = 1;
+			DEBUG_LOG("fast-reg test!\n");
+			break;
+		case 'q':
+			cb->use_srq = true;
+			cb->srq = NULL;
+			break;
+		default:
+			pr_err("unknown opt %s\n", optarg);
+			ret = -EINVAL;
+			break;
+		}
+	}
+
+	return ret;
+}
+
 int krperf_doit(char *cmd)
 {
 	struct krperf_cb *cb;
-	int op;
+	//int op;
 	int ret = 0;
-	char *optarg;
-	char *scope;
-	unsigned long optint;
+//	char *optarg;
+//	char *scope;
+//	unsigned long optint;
 
 	cb = kzalloc(sizeof(*cb), GFP_KERNEL);
 	if (!cb)
@@ -1803,7 +1876,7 @@ int krperf_doit(char *cmd)
 	cb->size = 64;
 	cb->txdepth = RPING_SQ_DEPTH;
 	init_waitqueue_head(&cb->sem);
-
+#if 0
 	while ((op = krperf_getopt("krperf", &cmd, krperf_opts, NULL, &optarg,
 			      &optint)) != 0) {
 		switch (op) {
@@ -1915,6 +1988,8 @@ int krperf_doit(char *cmd)
 			break;
 		}
 	}
+#endif
+	ret = krperf_parse(cmd, cb);
 	if (ret)
 		goto out;
 
