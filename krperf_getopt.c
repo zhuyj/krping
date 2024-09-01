@@ -1,5 +1,5 @@
 /*
- * lifted from fs/ncpfs/getopt.c
+ * lifted from krperf.c
  */
 #include <linux/kernel.h>
 #include <linux/string.h>
@@ -10,6 +10,7 @@
 #include <linux/inet.h>
 
 #include "krperf_getopt.h"
+
 #undef pr_fmt
 #define pr_fmt(fmt) PFX fmt
 /**
@@ -38,12 +39,14 @@ static int krperf_getopt(const char *caller, char **options,
 		if ((token = strsep(options, ",")) == NULL)
 			return 0;
 	} while (*token == '\0');
+
 	if (optopt)
 		*optopt = token;
 
 	if ((val = strchr (token, '=')) != NULL) {
 		*val++ = 0;
 	}
+
 	*optarg = val;
 	for (; opts->name; opts++) {
 		if (!strcmp(opts->name, token)) {
@@ -51,10 +54,11 @@ static int krperf_getopt(const char *caller, char **options,
 				if (opts->has_arg & OPT_NOPARAM) {
 					return opts->val;
 				}
-				printk(KERN_INFO "%s: the %s option requires "
-				       "an argument\n", caller, token);
+
+				pr_info("%s: the %s option requires an argument\n", caller, token);
 				return -EINVAL;
 			}
+
 			if (opts->has_arg & OPT_INT) {
 				char* v;
 
@@ -62,19 +66,19 @@ static int krperf_getopt(const char *caller, char **options,
 				if (!*v) {
 					return opts->val;
 				}
-				printk(KERN_INFO "%s: invalid numeric value "
-				       "in %s=%s\n", caller, token, val);
+				pr_info("%s: invalid numeric value in %s=%s\n", caller, token, val);
 				return -EDOM;
 			}
+
 			if (opts->has_arg & OPT_STRING) {
 				return opts->val;
 			}
-			printk(KERN_INFO "%s: unexpected argument %s to the "
-			       "%s option\n", caller, val, token);
+			pr_info("%s: unexpected argument %s to the %s option\n", caller, val, token);
 			return -EINVAL;
 		}
 	}
-	printk(KERN_INFO "%s: Unrecognized option %s\n", caller, token);
+
+	pr_info("%s: Unrecognized option %s\n", caller, token);
 	return -EOPNOTSUPP;
 }
 
