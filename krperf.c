@@ -82,7 +82,7 @@ static int krperf_cma_event_handler(struct rdma_cm_id *cma_id,
 	case RDMA_CM_EVENT_ESTABLISHED:
 		DEBUG_LOG("ESTABLISHED\n");
 		if (!cb->server) {
-			cb->state = CONNECTED;
+			cb->state = KRPERF_CONNECTED;
 		}
 		wake_up_interruptible(&cb->sem);
 		break;
@@ -94,19 +94,19 @@ static int krperf_cma_event_handler(struct rdma_cm_id *cma_id,
 	case RDMA_CM_EVENT_REJECTED:
 		pr_err("cma event %d, error %d\n", event->event,
 		       event->status);
-		cb->state = ERROR;
+		cb->state = KRPERF_ERROR;
 		wake_up_interruptible(&cb->sem);
 		break;
 
 	case RDMA_CM_EVENT_DISCONNECTED:
 		printk(KERN_WARNING PFX "DISCONNECT EVENT...\n");
-		cb->state = ERROR;
+		cb->state = KRPERF_ERROR;
 		wake_up_interruptible(&cb->sem);
 		break;
 
 	case RDMA_CM_EVENT_DEVICE_REMOVAL:
 		pr_err("cma detected device removal!!!!\n");
-		cb->state = ERROR;
+		cb->state = KRPERF_ERROR;
 		wake_up_interruptible(&cb->sem);
 		break;
 
@@ -132,7 +132,7 @@ static int server_recv(struct krperf_cb *cb, struct ib_wc *wc)
 		  cb->remote_rkey, (unsigned long long)cb->remote_addr, 
 		  cb->remote_len);
 
-	if (cb->state <= CONNECTED || cb->state == RDMA_WRITE_COMPLETE)
+	if (cb->state <= KRPERF_CONNECTED || cb->state == RDMA_WRITE_COMPLETE)
 		cb->state = RDMA_READ_ADV;
 	else
 		cb->state = RDMA_WRITE_ADV;
@@ -163,7 +163,7 @@ static void krperf_cq_event_handler(struct ib_cq *cq, void *ctx)
 	int ret;
 
 	BUG_ON(cb->cq != cq);
-	if (cb->state == ERROR) {
+	if (cb->state == KRPERF_ERROR) {
 		printk(KERN_WARNING PFX "cq completion in ERROR state\n");
 		return;
 	}
@@ -243,7 +243,7 @@ static void krperf_cq_event_handler(struct ib_cq *cq, void *ctx)
 	}
 	return;
 error:
-	cb->state = ERROR;
+	cb->state = KRPERF_ERROR;
 	wake_up_interruptible(&cb->sem);
 }
 
@@ -274,8 +274,8 @@ static int krperf_accept(struct krperf_cb *cb)
 	}
 
 	if (!cb->wlat && !cb->rlat && !cb->bw) {
-		wait_event_interruptible(cb->sem, cb->state >= CONNECTED);
-		if (cb->state == ERROR) {
+		wait_event_interruptible(cb->sem, cb->state >= KRPERF_CONNECTED);
+		if (cb->state == KRPERF_ERROR) {
 			pr_err("wait for CONNECTED state %d\n", cb->state);
 			return -1;
 		}
@@ -569,7 +569,7 @@ static u32 krperf_rdma_rkey(struct krperf_cb *cb, u64 buf, int post_inv)
 		ret = ib_post_send(cb->qp, &cb->reg_mr_wr.wr, &bad_wr);
 	if (ret) {
 		pr_err("post send error %d(%pe)\n", ret, ERR_PTR(ret));
-		cb->state = ERROR;
+		cb->state = KRPERF_ERROR;
 	}
 	rkey = cb->reg_mr->rkey;
 	return rkey;
@@ -713,7 +713,7 @@ static void krperf_test_server(struct krperf_cb *cb)
 		}
 		DEBUG_LOG("server rdma write complete \n");
 
-		cb->state = CONNECTED;
+		cb->state = KRPERF_CONNECTED;
 
 		/* Tell client to begin again */
 		if (cb->server && cb->server_invalidate) {
@@ -773,8 +773,8 @@ static void rlat_test(struct krperf_cb *cb)
 				}
 			} else
 				ne = ib_poll_cq(cb->cq, 1, &wc);
-			if (cb->state == ERROR) {
-				pr_err("state == ERROR...bailing scnt %d\n",
+			if (cb->state == KRPERF_ERROR) {
+				pr_err("state == KRPERF_ERROR...bailing scnt %d\n",
 					scnt);
 				return;
 			}
@@ -860,7 +860,7 @@ static void wlat_test(struct krperf_cb *cb)
 		if (rcnt < iters && !(scnt < 1 && !cb->server)) {
 			++rcnt;
 			while (*poll_buf != (char)rcnt) {
-				if (cb->state == ERROR) {
+				if (cb->state == KRPERF_ERROR) {
 					pr_err("state = ERROR, bailing\n");
 					goto done;
 				}
@@ -1083,7 +1083,7 @@ static void krperf_rlat_test_server(struct krperf_cb *cb)
 		return;
 	}
 
-	wait_event_interruptible(cb->sem, cb->state == ERROR);
+	wait_event_interruptible(cb->sem, cb->state == KRPERF_ERROR);
 }
 
 static void krperf_wlat_test_server(struct krperf_cb *cb)
@@ -1117,7 +1117,7 @@ static void krperf_wlat_test_server(struct krperf_cb *cb)
 	}
 
 	wlat_test(cb);
-	wait_event_interruptible(cb->sem, cb->state == ERROR);
+	wait_event_interruptible(cb->sem, cb->state == KRPERF_ERROR);
 }
 
 static void krperf_bw_test_server(struct krperf_cb *cb)
@@ -1152,7 +1152,7 @@ static void krperf_bw_test_server(struct krperf_cb *cb)
 
 	if (cb->duplex)
 		bw_test(cb);
-	wait_event_interruptible(cb->sem, cb->state == ERROR);
+	wait_event_interruptible(cb->sem, cb->state == KRPERF_ERROR);
 }
 
 static int reg_supported(struct ib_device *dev)
@@ -1303,7 +1303,7 @@ static void krperf_test_client(struct krperf_cb *cb)
 		cb->start_buf[cb->size - 1] = 0;
 
 		krperf_format_send(cb, cb->start_dma_addr);
-		if (cb->state == ERROR) {
+		if (cb->state == KRPERF_ERROR) {
 			pr_err("krperf_format_send failed\n");
 			break;
 		}
@@ -1347,7 +1347,7 @@ static void krperf_test_client(struct krperf_cb *cb)
 			printk(KERN_INFO PFX "ping data (64B max): |%.64s|\n",
 				cb->rdma_buf);
 #ifdef SLOW_KRPERF
-		wait_event_interruptible_timeout(cb->sem, cb->state == ERROR, HZ);
+		wait_event_interruptible_timeout(cb->sem, cb->state == KRPERF_ERROR, HZ);
 #endif
 	}
 }
@@ -1362,7 +1362,7 @@ static void krperf_rlat_test_client(struct krperf_cb *cb)
 
 	/* Send STAG/TO/Len to client */
 	krperf_format_send(cb, cb->start_dma_addr);
-	if (cb->state == ERROR) {
+	if (cb->state == KRPERF_ERROR) {
 		pr_err("krperf_format_send failed\n");
 		return;
 	}
@@ -1401,7 +1401,7 @@ static void krperf_wlat_test_client(struct krperf_cb *cb)
 
 	/* Send STAG/TO/Len to client */
 	krperf_format_send(cb, cb->start_dma_addr);
-	if (cb->state == ERROR) {
+	if (cb->state == KRPERF_ERROR) {
 		pr_err("krperf_format_send failed\n");
 		return;
 	}
@@ -1440,7 +1440,7 @@ static void krperf_bw_test_client(struct krperf_cb *cb)
 
 	/* Send STAG/TO/Len to client */
 	krperf_format_send(cb, cb->start_dma_addr);
-	if (cb->state == ERROR) {
+	if (cb->state == KRPERF_ERROR) {
 		pr_err("krperf_format_send failed\n");
 		return;
 	}
@@ -1575,8 +1575,8 @@ static void krperf_fr_test(struct krperf_cb *cb)
 		}
 		if ((krperf_get_seconds() - start) >= 9) {
 			DEBUG_LOG("fr_test: pausing 1 second! count %u latest size %u plen %u\n", count, size, plen);
-			wait_event_interruptible_timeout(cb->sem, cb->state == ERROR, HZ);
-			if (cb->state == ERROR)
+			wait_event_interruptible_timeout(cb->sem, cb->state == KRPERF_ERROR, HZ);
+			if (cb->state == KRPERF_ERROR)
 				break;
 			start = krperf_get_seconds();
 		}	
@@ -1638,8 +1638,8 @@ static int krperf_connect_client(struct krperf_cb *cb)
 		return ret;
 	}
 
-	wait_event_interruptible(cb->sem, cb->state >= CONNECTED);
-	if (cb->state == ERROR) {
+	wait_event_interruptible(cb->sem, cb->state >= KRPERF_CONNECTED);
+	if (cb->state == KRPERF_ERROR) {
 		pr_err("wait for CONNECTED state %d\n", cb->state);
 		return -1;
 	}
