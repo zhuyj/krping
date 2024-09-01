@@ -20,6 +20,8 @@ struct krperf_stats {
 #define htonll(x) cpu_to_be64((x))
 #define ntohll(x) cpu_to_be64((x))
 
+#define PFX	"krperf: "
+
 /*
  * Invoke like this, one on each side, using the server's address on
  * the RDMA device (iw%d):

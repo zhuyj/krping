@@ -10,8 +10,8 @@
 #include <linux/inet.h>
 
 #include "krperf_getopt.h"
-
-#define DEBUG_LOG printk
+#undef pr_fmt
+#define pr_fmt(fmt) PFX fmt
 /**
  *	krperf_getopt - option parser
  *	@caller: name of the caller, for error messages
@@ -93,7 +93,7 @@ int krperf_parse(char *cmd, struct krperf_cb *cb)
 			cb->addr_str = optarg;
 			in4_pton(optarg, -1, cb->addr, -1, NULL);
 			cb->addr_type = AF_INET;
-			DEBUG_LOG("ipaddr (%s)\n", optarg);
+			pr_info("ipaddr (%s)\n", optarg);
 			break;
 		case 'A':
 			cb->addr_str = optarg;
@@ -108,23 +108,23 @@ int krperf_parse(char *cmd, struct krperf_cb *cb)
 			}
 			in6_pton(optarg, -1, cb->addr, -1, NULL);
 			cb->addr_type = AF_INET6;
-			DEBUG_LOG("ipv6addr (%s)\n", optarg);
+			pr_info("ipv6addr (%s)\n", optarg);
 			break;
 		case 'p':
 			cb->port = htons(optint);
-			DEBUG_LOG("port %d\n", (int)optint);
+			pr_info("port %d\n", (int)optint);
 			break;
 		case 'P':
 			cb->poll = 1;
-			DEBUG_LOG("server\n");
+			pr_info("poll\n");
 			break;
 		case 's':
 			cb->server = 1;
-			DEBUG_LOG("server\n");
+			pr_info("server\n");
 			break;
 		case 'c':
 			cb->server = 0;
-			DEBUG_LOG("client\n");
+			pr_info("client\n");
 			break;
 		case 'S':
 			cb->size = optint;
@@ -133,7 +133,7 @@ int krperf_parse(char *cmd, struct krperf_cb *cb)
 				       cb->size, RPING_BUFSIZE);
 				ret = EINVAL;
 			} else {
-				DEBUG_LOG("size %d\n", (int)optint);
+				pr_info("size %d\n", (int)optint);
 			}
 			break;
 		case 'C':
@@ -142,16 +142,16 @@ int krperf_parse(char *cmd, struct krperf_cb *cb)
 				pr_err("Invalid count %d\n", cb->count);
 				ret = EINVAL;
 			} else {
-				DEBUG_LOG("count %d\n", (int) cb->count);
+				pr_info("count %d\n", (int) cb->count);
 			}
 			break;
 		case 'v':
 			cb->verbose++;
-			DEBUG_LOG("verbose\n");
+			pr_info("verbose\n");
 			break;
 		case 'V':
 			cb->validate++;
-			DEBUG_LOG("validate data\n");
+			pr_info("validate data\n");
 			break;
 		case 'l':
 			cb->wlat++;
@@ -170,23 +170,23 @@ int krperf_parse(char *cmd, struct krperf_cb *cb)
 			break;
 		case 't':
 			cb->tos = optint;
-			DEBUG_LOG("type of service, tos=%d\n", (int) cb->tos);
+			pr_info("type of service, tos=%d\n", (int) cb->tos);
 			break;
 		case 'T':
 			cb->txdepth = optint;
-			DEBUG_LOG("txdepth %d\n", (int) cb->txdepth);
+			pr_info("txdepth %d\n", (int) cb->txdepth);
 			break;
 		case 'Z':
 			cb->local_dma_lkey = 1;
-			DEBUG_LOG("using local dma lkey\n");
+			pr_info("using local dma lkey\n");
 			break;
 		case 'R':
 			cb->read_inv = 1;
-			DEBUG_LOG("using read-with-inv\n");
+			pr_info("using read-with-inv\n");
 			break;
 		case 'f':
 			cb->frtest = 1;
-			DEBUG_LOG("fast-reg test!\n");
+			pr_info("fast-reg test!\n");
 			break;
 		case 'q':
 			cb->use_srq = true;

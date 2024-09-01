@@ -6,9 +6,10 @@
 
 #include "krperf.h"
 
-#define OPT_NOPARAM	1
-#define OPT_INT		2
-#define OPT_STRING	4
+#define OPT_NOPARAM	BIT(0)
+#define OPT_INT		BIT(1)
+#define OPT_STRING	BIT(2)
+
 struct krperf_option {
 	const char *name;
 	unsigned int has_arg;

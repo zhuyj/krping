@@ -31,7 +31,6 @@
 
 #undef pr_fmt
 #define pr_fmt(fmt) KBUILD_MODNAME " L" __stringify(__LINE__) ": file: %s +%d caller: %ps " fmt, __FILE__, __LINE__, __builtin_return_address(0)
-#define PFX "krperf: "
 
 DEFINE_MUTEX(krperf_mutex);
 
