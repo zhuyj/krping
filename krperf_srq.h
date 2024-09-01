@@ -7,7 +7,7 @@ int krperf_alloc_srq(struct krperf_cb *cb);
 void krperf_free_srq(struct krperf_cb *cb);
 int krperf_ib_srq_rq_post_recv(struct krperf_cb *cb, const struct ib_recv_wr **bad_wr);
 
-static inline bool krperf_srq_valid(struct krperf_cb *cb)
+static __always_inline bool krperf_srq_valid(struct krperf_cb *cb)
 {
         if (cb != NULL && cb->use_srq && cb->srq != NULL)
                 return true;

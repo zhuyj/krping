@@ -43,10 +43,10 @@ static void krperf_srq_event(struct ib_event *event, void *ctx)
 {
 	switch (event->event) {
 	case IB_EVENT_SRQ_ERR:
-		pr_err("KRPERF: event IB_EVENT_SRQ_ERR unhandled\n");
+		pr_err("event IB_EVENT_SRQ_ERR unhandled\n");
 		break;
 	case IB_EVENT_SRQ_LIMIT_REACHED:
-		pr_err("KRPERF: reach SRQ_LIMIT, need to increase the value of sge\n");
+		pr_err("reach SRQ_LIMIT, need to increase the value of sge\n");
 		break;
 	default:
 		break;
@@ -99,19 +99,17 @@ int krperf_ib_srq_rq_post_recv(struct krperf_cb *cb, const struct ib_recv_wr **b
 	if (krperf_srq_valid(cb)) {
 		ret = ib_post_srq_recv(cb->srq, &cb->rq_wr, bad_wr);
 		if (ret) {
-			pr_warn("ib_post_srq_recv failed: %d\n", ret);
+			pr_warn("ib_post_srq_recv failed: %d(%pe)\n", ret, ERR_PTR(ret));
 			return ret;
 		}
 
 	} else {
 		ret = ib_post_recv(cb->qp, &cb->rq_wr, bad_wr);
 		if (ret) {
-			pr_warn("ib__post_recv failed: %d\n", ret);
+			pr_warn("ib__post_recv failed: %d(%pe)\n", ret, ERR_PTR(ret));
 			return ret;
 		}
 	}
 
 	return 0;
 }
-
-
