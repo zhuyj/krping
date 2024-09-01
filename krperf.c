@@ -100,7 +100,7 @@ static int krperf_cma_event_handler(struct rdma_cm_id *cma_id,
 		break;
 
 	case RDMA_CM_EVENT_DISCONNECTED:
-		pr_err("DISCONNECT EVENT...\n");
+		printk(KERN_WARNING PFX "DISCONNECT EVENT...\n");
 		cb->state = ERROR;
 		wake_up_interruptible(&cb->sem);
 		break;
@@ -165,7 +165,7 @@ static void krperf_cq_event_handler(struct ib_cq *cq, void *ctx)
 
 	BUG_ON(cb->cq != cq);
 	if (cb->state == ERROR) {
-		pr_err("cq completion in ERROR state\n");
+		printk(KERN_WARNING PFX "cq completion in ERROR state\n");
 		return;
 	}
 	if (cb->frtest) {
@@ -606,7 +606,7 @@ static void krperf_test_server(struct krperf_cb *cb)
 		/* Wait for client's Start STAG/TO/Len */
 		wait_event_interruptible(cb->sem, cb->state >= RDMA_READ_ADV);
 		if (cb->state != RDMA_READ_ADV) {
-			pr_err("wait for RDMA_READ_ADV state %d\n",
+			printk(KERN_WARNING PFX "wait for RDMA_READ_ADV state %d\n",
 				cb->state);
 			break;
 		}
