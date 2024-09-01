@@ -5,9 +5,13 @@
 #include <linux/string.h>
 
 #include <asm/errno.h>
+#include <rdma/ib_verbs.h>
+#include <rdma/rdma_cm.h>
+#include <linux/inet.h>
 
 #include "krperf_getopt.h"
 
+#define DEBUG_LOG printk
 /**
  *	krperf_getopt - option parser
  *	@caller: name of the caller, for error messages
@@ -23,7 +27,7 @@
  *	Returns opts->val if a matching entry in the 'opts' array is found,
  *	0 when no more tokens are found, -1 if an error is encountered.
  */
-int krperf_getopt(const char *caller, char **options,
+static int krperf_getopt(const char *caller, char **options,
 		  const struct krperf_option *opts, char **optopt,
 		  char **optarg, unsigned long *value)
 {
@@ -72,4 +76,128 @@ int krperf_getopt(const char *caller, char **options,
 	}
 	printk(KERN_INFO "%s: Unrecognized option %s\n", caller, token);
 	return -EOPNOTSUPP;
+}
+
+int krperf_parse(char *cmd, struct krperf_cb *cb)
+{
+	unsigned long optint;
+	char *optarg;
+	int ret = 0;
+	char *scope;
+	int op;
+
+	while ((op = krperf_getopt("krperf", &cmd, krperf_opts, NULL, &optarg,
+			      &optint)) != 0) {
+		switch (op) {
+		case 'a':
+			cb->addr_str = optarg;
+			in4_pton(optarg, -1, cb->addr, -1, NULL);
+			cb->addr_type = AF_INET;
+			DEBUG_LOG("ipaddr (%s)\n", optarg);
+			break;
+		case 'A':
+			cb->addr_str = optarg;
+			scope = strstr(optarg, "%");
+			if (scope != NULL) {
+				*scope++ = 0;
+				strncpy(cb->ip6_ndev_name, scope,
+					sizeof(cb->ip6_ndev_name));
+				/* force zero-termination */
+				cb->ip6_ndev_name[
+				        sizeof(cb->ip6_ndev_name) - 1] = 0;
+			}
+			in6_pton(optarg, -1, cb->addr, -1, NULL);
+			cb->addr_type = AF_INET6;
+			DEBUG_LOG("ipv6addr (%s)\n", optarg);
+			break;
+		case 'p':
+			cb->port = htons(optint);
+			DEBUG_LOG("port %d\n", (int)optint);
+			break;
+		case 'P':
+			cb->poll = 1;
+			DEBUG_LOG("server\n");
+			break;
+		case 's':
+			cb->server = 1;
+			DEBUG_LOG("server\n");
+			break;
+		case 'c':
+			cb->server = 0;
+			DEBUG_LOG("client\n");
+			break;
+		case 'S':
+			cb->size = optint;
+			if ((cb->size < 1) || (cb->size > RPING_BUFSIZE)) {
+				pr_err("Invalid size %d (valid range is 1 to %d)\n",
+				       cb->size, RPING_BUFSIZE);
+				ret = EINVAL;
+			} else {
+				DEBUG_LOG("size %d\n", (int)optint);
+			}
+			break;
+		case 'C':
+			cb->count = optint;
+			if (cb->count < 0) {
+				pr_err("Invalid count %d\n", cb->count);
+				ret = EINVAL;
+			} else {
+				DEBUG_LOG("count %d\n", (int) cb->count);
+			}
+			break;
+		case 'v':
+			cb->verbose++;
+			DEBUG_LOG("verbose\n");
+			break;
+		case 'V':
+			cb->validate++;
+			DEBUG_LOG("validate data\n");
+			break;
+		case 'l':
+			cb->wlat++;
+			break;
+		case 'L':
+			cb->rlat++;
+			break;
+		case 'B':
+			cb->bw++;
+			break;
+		case 'd':
+			cb->duplex++;
+			break;
+		case 'I':
+			cb->server_invalidate = 1;
+			break;
+		case 't':
+			cb->tos = optint;
+			DEBUG_LOG("type of service, tos=%d\n", (int) cb->tos);
+			break;
+		case 'T':
+			cb->txdepth = optint;
+			DEBUG_LOG("txdepth %d\n", (int) cb->txdepth);
+			break;
+		case 'Z':
+			cb->local_dma_lkey = 1;
+			DEBUG_LOG("using local dma lkey\n");
+			break;
+		case 'R':
+			cb->read_inv = 1;
+			DEBUG_LOG("using read-with-inv\n");
+			break;
+		case 'f':
+			cb->frtest = 1;
+			DEBUG_LOG("fast-reg test!\n");
+			break;
+		case 'q':
+			cb->use_srq = true;
+			cb->srq = NULL;
+			break;
+		default:
+			pr_err("unknown opt %s\n", optarg);
+			ret = -EINVAL;
+			break;
+		}
+	}
+
+	return ret;
 }

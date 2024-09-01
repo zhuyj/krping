@@ -4,6 +4,8 @@
 #ifndef _KRPERF_GETOPT_H
 #define _KRPERF_GETOPT_H
 
+#include "krperf.h"
+
 #define OPT_NOPARAM	1
 #define OPT_INT		2
 #define OPT_STRING	4
@@ -38,7 +40,6 @@ static const struct krperf_option krperf_opts[] = {
 	{NULL, 0, 0}
 };
 
-extern int krperf_getopt(const char *caller, char **options, const struct krperf_option *opts,
-		      char **optopt, char **optarg, unsigned long *value);
+int krperf_parse(char *cmd, struct krperf_cb *cb);
 
 #endif /* _KRPERF_GETOPT_H */
