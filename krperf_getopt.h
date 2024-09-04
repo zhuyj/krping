@@ -27,7 +27,6 @@ static const struct krperf_option krperf_opts[] = {
 	{"server", OPT_NOPARAM, 's'},
 	{"client", OPT_NOPARAM, 'c'},
 	{"server_inv", OPT_NOPARAM, 'I'},
-	{"rlat", OPT_NOPARAM, 'L'},
 	{"duplex", OPT_NOPARAM, 'd'},
 	{"tos", OPT_INT, 't'},
 	{"txdepth", OPT_INT, 'T'},

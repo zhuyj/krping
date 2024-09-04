@@ -245,12 +245,10 @@ the kernel rdma performance.  These include:
 
 Opcode		Operand Type	Description
 ------------------------------------------------------------------------
-rlat		none		read latency test
-poll		none		enable polling vs blocking for rlat
+poll		none		enable polling
 duplex		none		valid only with bw, this
 				enables bidirectional mode
 tx-depth	none		set the sq depth for bw tests
-
 
 See the awkit* files to take the data logged in the kernel log
 and compute RTT/2 or Gbps results.
