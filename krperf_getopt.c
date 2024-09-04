@@ -157,9 +157,6 @@ int krperf_parse(char *cmd, struct krperf_cb *cb)
 			cb->validate++;
 			pr_info("validate data\n");
 			break;
-		case 'L':
-			cb->rlat++;
-			break;
 		case 'd':
 			cb->duplex++;
 			break;
