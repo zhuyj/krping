@@ -171,7 +171,7 @@ static void krperf_cq_event_handler(struct ib_cq *cq, void *ctx)
 		pr_err("cq completion event in frtest!\n");
 		return;
 	}
-	if (!cb->wlat && !cb->rlat && !cb->bw)
+	if (!cb->rlat && !cb->bw)
 		schedule_work(&cb->ib_req_notify_cq_work);
 	while ((ret = ib_poll_cq(cb->cq, 1, &wc)) == 1) {
 		if (wc.status) {
@@ -213,7 +213,7 @@ static void krperf_cq_event_handler(struct ib_cq *cq, void *ctx)
 			DEBUG_LOG("recv completion\n");
 			cb->stats.recv_bytes += sizeof(cb->recv_buf);
 			cb->stats.recv_msgs++;
-			if (cb->wlat || cb->rlat || cb->bw)
+			if (cb->rlat || cb->bw)
 				ret = server_recv(cb, &wc);
 			else
 				ret = cb->server ? server_recv(cb, &wc) :
@@ -273,7 +273,7 @@ static int krperf_accept(struct krperf_cb *cb)
 		return ret;
 	}
 
-	if (!cb->wlat && !cb->rlat && !cb->bw) {
+	if (!cb->rlat && !cb->bw) {
 		wait_event_interruptible(cb->sem, cb->state >= KRPERF_CONNECTED);
 		if (cb->state == KRPERF_ERROR) {
 			pr_err("wait for CONNECTED state %d\n", cb->state);
@@ -300,7 +300,7 @@ static void krperf_setup_wr(struct krperf_cb *cb)
 	cb->sq_wr.sg_list = &cb->send_sgl;
 	cb->sq_wr.num_sge = 1;
 
-	if (cb->server || cb->wlat || cb->rlat || cb->bw) {
+	if (cb->server || cb->rlat || cb->bw) {
 		cb->rdma_sgl.addr = cb->rdma_dma_addr;
 		cb->rdma_sq_wr.wr.send_flags = IB_SEND_SIGNALED;
 		cb->rdma_sq_wr.wr.sg_list = &cb->rdma_sgl;
@@ -356,7 +356,7 @@ static int krperf_setup_buffers(struct krperf_cb *cb)
 	DEBUG_LOG(PFX "reg rkey 0x%x page_list_len %u\n",
 		cb->reg_mr->rkey, cb->page_list_len);
 
-	if (!cb->server || cb->wlat || cb->rlat || cb->bw) {
+	if (!cb->server || cb->rlat || cb->bw) {
 		cb->start_buf = kzalloc(cb->size, GFP_KERNEL);
 		if (cb->start_buf)
 			cb->start_dma_addr = ib_dma_map_single(cb->pd->device, cb->start_buf, cb->size, DMA_BIDIRECTIONAL);
@@ -491,7 +491,7 @@ static int krperf_setup_qp(struct krperf_cb *cb, struct rdma_cm_id *cm_id)
 	}
 	DEBUG_LOG("created cq %p\n", cb->cq);
 
-	if (!cb->wlat && !cb->rlat && !cb->bw && !cb->frtest) {
+	if (!cb->rlat && !cb->bw && !cb->frtest) {
 		ret = ib_req_notify_cq(cb->cq, IB_CQ_NEXT_COMP);
 		if (ret) {
 			pr_err("ib_create_cq failed\n");
@@ -585,7 +585,7 @@ static void krperf_format_send(struct krperf_cb *cb, u64 buf)
 	 * advertising the rdma buffer.  Server side
 	 * sends have no data.
 	 */
-	if (!cb->server || cb->wlat || cb->rlat || cb->bw) {
+	if (!cb->server || cb->rlat || cb->bw) {
 		rkey = krperf_rdma_rkey(cb, buf, !cb->server_invalidate);
 		info->buf = htonll(buf);
 		info->rkey = htonl(rkey);
@@ -800,141 +800,6 @@ static void rlat_test(struct krperf_cb *cb)
 		scnt, cb->size);
 }
 
-static void wlat_test(struct krperf_cb *cb)
-{
-	int ccnt, scnt, rcnt;
-	int iters=cb->count;
-	volatile char *poll_buf = (char *) cb->start_buf;
-	char *buf = (char *)cb->rdma_buf;
-	ktime_t start, stop;
-	cycles_t *post_cycles_start = NULL;
-	cycles_t *post_cycles_stop = NULL;
-	cycles_t *poll_cycles_start = NULL;
-	cycles_t *poll_cycles_stop = NULL;
-	cycles_t *last_poll_cycles_start = NULL;
-	cycles_t sum_poll = 0, sum_post = 0, sum_last_poll = 0;
-	int i;
-	int cycle_iters = 1000;
-
-	ccnt = 0;
-	scnt = 0;
-	rcnt = 0;
-
-	post_cycles_start = kmalloc(cycle_iters * sizeof(cycles_t), GFP_KERNEL);
-	if (!post_cycles_start) {
-		pr_err("%s kmalloc failed\n", __FUNCTION__);
-		goto done;
-	}
-	post_cycles_stop = kmalloc(cycle_iters * sizeof(cycles_t), GFP_KERNEL);
-	if (!post_cycles_stop) {
-		pr_err("%s kmalloc failed\n", __FUNCTION__);
-		goto done;
-	}
-	poll_cycles_start = kmalloc(cycle_iters * sizeof(cycles_t), GFP_KERNEL);
-	if (!poll_cycles_start) {
-		pr_err("%s kmalloc failed\n", __FUNCTION__);
-		goto done;
-	}
-	poll_cycles_stop = kmalloc(cycle_iters * sizeof(cycles_t), GFP_KERNEL);
-	if (!poll_cycles_stop) {
-		pr_err("%s kmalloc failed\n", __FUNCTION__);
-		goto done;
-	}
-	last_poll_cycles_start = kmalloc(cycle_iters * sizeof(cycles_t), 
-		GFP_KERNEL);
-	if (!last_poll_cycles_start) {
-		pr_err("%s kmalloc failed\n", __FUNCTION__);
-		goto done;
-	}
-	cb->rdma_sq_wr.wr.opcode = IB_WR_RDMA_WRITE;
-	cb->rdma_sq_wr.rkey = cb->remote_rkey;
-	cb->rdma_sq_wr.remote_addr = cb->remote_addr;
-	cb->rdma_sq_wr.wr.sg_list->length = cb->size;
-
-	if (cycle_iters > iters)
-		cycle_iters = iters;
-	start = ktime_get();
-	while (scnt < iters || ccnt < iters || rcnt < iters) {
-
-		/* Wait till buffer changes. */
-		if (rcnt < iters && !(scnt < 1 && !cb->server)) {
-			++rcnt;
-			while (*poll_buf != (char)rcnt) {
-				if (cb->state == KRPERF_ERROR) {
-					pr_err("state = ERROR, bailing\n");
-					goto done;
-				}
-			}
-		}
-
-		if (scnt < iters) {
-			const struct ib_send_wr *bad_wr;
-
-			*buf = (char)scnt+1;
-			if (scnt < cycle_iters)
-				post_cycles_start[scnt] = get_cycles();
-			if (ib_post_send(cb->qp, &cb->rdma_sq_wr.wr, &bad_wr)) {
-				pr_err("Couldn't post send: scnt=%d\n",
-					scnt);
-				goto done;
-			}
-			if (scnt < cycle_iters)
-				post_cycles_stop[scnt] = get_cycles();
-			scnt++;
-		}
-
-		if (ccnt < iters) {
-			struct ib_wc wc;
-			int ne;
-
-			if (ccnt < cycle_iters)
-				poll_cycles_start[ccnt] = get_cycles();
-			do {
-				if (ccnt < cycle_iters)
-					last_poll_cycles_start[ccnt] = 
-						get_cycles();
-				ne = ib_poll_cq(cb->cq, 1, &wc);
-			} while (ne == 0);
-			if (ccnt < cycle_iters)
-				poll_cycles_stop[ccnt] = get_cycles();
-			++ccnt;
-
-			if (ne < 0) {
-				pr_err("poll CQ failed %d(%pe)\n", ne, ERR_PTR(ne));
-				goto done;
-			}
-			if (wc.status != IB_WC_SUCCESS) {
-				pr_err("Completion wth error at %s:\n",
-					cb->server ? "server" : "client");
-				pr_err("Failed status %d: wr_id %d\n",
-					wc.status, (int) wc.wr_id);
-				pr_err("scnt=%d, rcnt=%d, ccnt=%d\n",
-					scnt, rcnt, ccnt);
-				goto done;
-			}
-		}
-	}
-	stop = ktime_get();
-
-	for (i=0; i < cycle_iters; i++) {
-		sum_post += post_cycles_stop[i] - post_cycles_start[i];
-		sum_poll += poll_cycles_stop[i] - poll_cycles_start[i];
-		sum_last_poll += poll_cycles_stop[i]-last_poll_cycles_start[i];
-	}
-	pr_err("delta nsec %llu iter %d size %d cycle_iters %d"
-		" sum_post %llu sum_poll %llu sum_last_poll %llu\n",
-		ktime_sub(stop, start),
-		scnt, cb->size, cycle_iters,
-		(unsigned long long)sum_post, (unsigned long long)sum_poll, 
-		(unsigned long long)sum_last_poll);
-done:
-	kfree(post_cycles_start);
-	kfree(post_cycles_stop);
-	kfree(poll_cycles_start);
-	kfree(poll_cycles_stop);
-	kfree(last_poll_cycles_start);
-}
-
 static void bw_test(struct krperf_cb *cb)
 {
 	int ccnt, scnt, rcnt;
@@ -1086,40 +951,6 @@ static void krperf_rlat_test_server(struct krperf_cb *cb)
 	wait_event_interruptible(cb->sem, cb->state == KRPERF_ERROR);
 }
 
-static void krperf_wlat_test_server(struct krperf_cb *cb)
-{
-	const struct ib_send_wr *bad_wr;
-	struct ib_wc wc;
-	int ret;
-
-	/* Spin waiting for client's Start STAG/TO/Len */
-	while (cb->state < RDMA_READ_ADV) {
-		krperf_cq_event_handler(cb->cq, cb);
-	}
-
-	/* Send STAG/TO/Len to client */
-	krperf_format_send(cb, cb->start_dma_addr);
-	ret = ib_post_send(cb->qp, &cb->sq_wr, &bad_wr);
-	if (ret) {
-		pr_err("post send error %d(%pe)\n", ret, ERR_PTR(ret));
-		return;
-	}
-
-	/* Spin waiting for send completion */
-	while ((ret = ib_poll_cq(cb->cq, 1, &wc) == 0));
-	if (ret < 0) {
-		pr_err("poll error %d(%pe)\n", ret, ERR_PTR(ret));
-		return;
-	}
-	if (wc.status) {
-		pr_err("send completiong error %d\n", wc.status);
-		return;
-	}
-
-	wlat_test(cb);
-	wait_event_interruptible(cb->sem, cb->state == KRPERF_ERROR);
-}
-
 static void krperf_bw_test_server(struct krperf_cb *cb)
 {
 	const struct ib_send_wr *bad_wr;
@@ -1262,9 +1093,7 @@ static void krperf_run_server(struct krperf_cb *cb)
 		goto err2;
 	}
 
-	if (cb->wlat)
-		krperf_wlat_test_server(cb);
-	else if (cb->rlat)
+	if (cb->rlat)
 		krperf_rlat_test_server(cb);
 	else if (cb->bw)
 		krperf_bw_test_server(cb);
@@ -1389,45 +1218,6 @@ static void krperf_rlat_test_client(struct krperf_cb *cb)
 	}
 
 	rlat_test(cb);
-}
-
-static void krperf_wlat_test_client(struct krperf_cb *cb)
-{
-	const struct ib_send_wr *bad_wr;
-	struct ib_wc wc;
-	int ret;
-
-	cb->state = RDMA_READ_ADV;
-
-	/* Send STAG/TO/Len to client */
-	krperf_format_send(cb, cb->start_dma_addr);
-	if (cb->state == KRPERF_ERROR) {
-		pr_err("krperf_format_send failed\n");
-		return;
-	}
-	ret = ib_post_send(cb->qp, &cb->sq_wr, &bad_wr);
-	if (ret) {
-		pr_err("post send error %d(%pe)\n", ret, ERR_PTR(ret));
-		return;
-	}
-
-	/* Spin waiting for send completion */
-	while ((ret = ib_poll_cq(cb->cq, 1, &wc) == 0));
-	if (ret < 0) {
-		pr_err("poll error %d(%pe)\n", ret, ERR_PTR(ret));
-		return;
-	}
-	if (wc.status) {
-		pr_err("send completion error %d\n", wc.status);
-		return;
-	}
-
-	/* Spin waiting for server's Start STAG/TO/Len */
-	while (cb->state < RDMA_WRITE_ADV) {
-		krperf_cq_event_handler(cb->cq, cb);
-	}
-
-	wlat_test(cb);
 }
 
 static void krperf_bw_test_client(struct krperf_cb *cb)
@@ -1712,9 +1502,7 @@ static void krperf_run_client(struct krperf_cb *cb)
 		goto err2;
 	}
 
-	if (cb->wlat)
-		krperf_wlat_test_client(cb);
-	else if (cb->rlat)
+	if (cb->rlat)
 		krperf_rlat_test_client(cb);
 	else if (cb->bw)
 		krperf_bw_test_client(cb);
@@ -1764,14 +1552,14 @@ int krperf_doit(char *cmd)
 		goto out;
 	}
 
-	if ((cb->frtest + cb->bw + cb->rlat + cb->wlat) > 1) {
-		pr_err("Pick only one test: fr, bw, rlat, wlat\n");
+	if ((cb->frtest + cb->bw + cb->rlat) > 1) {
+		pr_err("Pick only one test: fr, bw, rlat\n");
 		ret = -EINVAL;
 		goto out;
 	}
 
-	if (cb->wlat || cb->rlat || cb->bw) {
-		pr_err("wlat, rlat, and bw tests only support mem_mode MR - which is no longer supported\n");
+	if (cb->rlat || cb->bw) {
+		pr_err("rlat, and bw tests only support mem_mode MR - which is no longer supported\n");
 		ret = -EINVAL;
 		goto out;
 	}

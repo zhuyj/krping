@@ -7,10 +7,11 @@
 #include <linux/proc_fs.h>
 
 #include "krperf.h"
+#include "krperf_proc.h"
+
 #undef pr_fmt
 #define pr_fmt(fmt) PFX fmt
 
-int krperf_doit(char *cmd);
 extern struct mutex krperf_mutex;
 extern struct list_head krperf_cbs;
 

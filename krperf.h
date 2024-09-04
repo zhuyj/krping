@@ -135,7 +135,6 @@ struct krperf_cb {
 	int count;			/* ping count */
 	int size;			/* ping data size */
 	int validate;			/* validate ping data */
-	int wlat;			/* run wlat test */
 	int rlat;			/* run rlat test */
 	int bw;				/* run bw test */
 	int duplex;			/* run bw full duplex test */
@@ -157,4 +156,5 @@ struct krperf_cb {
 	struct ib_srq			*srq;
 };
 
+int krperf_doit(char *cmd);
 #endif /* _KRPERF_H */
