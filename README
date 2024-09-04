@@ -245,10 +245,8 @@ the kernel rdma performance.  These include:
 
 Opcode		Operand Type	Description
 ------------------------------------------------------------------------
-wlat		none		Write latency test
 rlat		none		read latency test
 poll		none		enable polling vs blocking for rlat
-bw		none		write throughput test
 duplex		none		valid only with bw, this
 				enables bidirectional mode
 tx-depth	none		set the sq depth for bw tests

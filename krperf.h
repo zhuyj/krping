@@ -136,7 +136,6 @@ struct krperf_cb {
 	int size;			/* ping data size */
 	int validate;			/* validate ping data */
 	int rlat;			/* run rlat test */
-	int bw;				/* run bw test */
 	int duplex;			/* run bw full duplex test */
 	int poll;			/* poll or block for rlat test */
 	int txdepth;			/* SQ depth */

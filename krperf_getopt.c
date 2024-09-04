@@ -160,9 +160,6 @@ int krperf_parse(char *cmd, struct krperf_cb *cb)
 		case 'L':
 			cb->rlat++;
 			break;
-		case 'B':
-			cb->bw++;
-			break;
 		case 'd':
 			cb->duplex++;
 			break;
